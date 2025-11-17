@@ -19,9 +19,16 @@ class FIMService:
       Creates folders {CWD}/FIM_evaluation/FIM_inputs/HUC{huc}_flood{YYYYMMDD[HHMMSS]}
       Downloads ONLY the matched record(s) (and their gpkg) into that folder.
     """
-    _, _, out_root = setup_directories()
-    default_root = out_root
-    owp_root = Path(os.getenv("OWP_OUT_ROOT", default_root))
+    # Run setup_directories() only when actually needed.
+    def _ensure_roots(self):
+        if hasattr(self, "_roots_initialized"):
+            return
+
+        _, _, out_root = setup_directories()
+        self.default_root = out_root
+        self.owp_root = Path(os.getenv("OWP_OUT_ROOT", out_root))
+
+        self._roots_initialized = True
 
     def availability(self, HUCID: str) -> str:
         from .utilis import availability as _avail
@@ -109,6 +116,8 @@ class FIMService:
             end_date=None,
             relaxed_for_print=False,
         )
+
+        self._ensure_roots()
 
         # If strict match missing but filename given → fallback to filename-based lookup
         if not strict_matches:
@@ -386,6 +395,8 @@ class FIMService:
         - Skip running if the target file (or any-hour for day-only) already exists.
         - After running, return the produced path (exact hour if known; else first match for the day).
         """
+        self._ensure_roots()
+        
         ymd, timestr = self._ymd_timestr_from_user(user_dt)
 
         # Skip if already there

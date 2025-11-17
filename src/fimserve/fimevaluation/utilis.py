@@ -70,7 +70,7 @@ def _record_day(rec: Dict[str, Any]) -> Optional[dt.date]:
             return dt.date.fromisoformat(ymd)
         except Exception:
             pass
-    raw = rec.get("date_raw")
+    raw = rec.get("date_of_flood")
     if isinstance(raw, str) and len(raw) >= 8:
         try:
             return dt.datetime.strptime(raw[:8], "%Y%m%d").date()
@@ -79,7 +79,7 @@ def _record_day(rec: Dict[str, Any]) -> Optional[dt.date]:
     return None
 
 def _record_hour_or_none(rec: Dict[str, Any]) -> Optional[int]:
-    raw = rec.get("date_raw")
+    raw = rec.get("date_of_flood")
     if isinstance(raw, str) and "T" in raw and len(raw) >= 11:
         try:
             return int(raw.split("T", 1)[1][:2])
@@ -89,7 +89,7 @@ def _record_hour_or_none(rec: Dict[str, Any]) -> Optional[int]:
 
 # Printing helpers
 def _pretty_date_for_print(rec: Dict[str, Any]) -> str:
-    raw = rec.get("date_raw")
+    raw = rec.get("date_of_flood")
     if isinstance(raw, str) and "T" in raw and len(raw) >= 11:
         return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}T{raw.split('T',1)[1][:2]}"
     ymd = rec.get("date_ymd")
@@ -238,7 +238,7 @@ def find_fims(
             if d1 and r_day > d1:
                 continue
             out.append(r)
-        out.sort(key=lambda x: (str(x.get("date_raw", "")), str(x.get("file_name", ""))))
+        out.sort(key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", ""))))
         return out
 
     if date_input and _to_hour_or_none(date_input) is None:
@@ -248,7 +248,7 @@ def find_fims(
             r_day = _record_day(r)
             if r_day == target_day:
                 out.append(r)
-        out.sort(key=lambda x: (str(x.get("date_raw", "")), str(x.get("file_name", ""))))
+        out.sort(key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", ""))))
         return out
 
     return find_fims(
@@ -269,7 +269,7 @@ def summarize_huc_availability(records: List[Dict[str, Any]], huc8: str) -> str:
 
     with_raw = []
     for r in recs:
-        raw = r.get("date_raw")
+        raw = r.get("date_of_flood")
         if isinstance(raw, str) and (len(raw) == 8 or ("T" in raw and len(raw) >= 11)):
             with_raw.append(r)
 
