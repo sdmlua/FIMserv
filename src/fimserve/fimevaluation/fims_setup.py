@@ -6,11 +6,21 @@ import shutil
 from collections import defaultdict
 
 # Internal utilities
-from .utilis import load_catalog_core, download_fim_assets, _to_date, _to_hour_or_none, _record_day, _record_hour_or_none, format_records_for_print,find_fims             
+from .utilis import (
+    load_catalog_core,
+    download_fim_assets,
+    _to_date,
+    _to_hour_or_none,
+    _record_day,
+    _record_hour_or_none,
+    format_records_for_print,
+    find_fims,
+)
 
 from ..datadownload import DownloadHUC8, setup_directories
 from ..streamflowdata.nwmretrospective import getNWMretrospectivedata
 from ..runFIM import runOWPHANDFIM
+
 
 class FIMService:
     """
@@ -19,6 +29,7 @@ class FIMService:
       Creates folders {CWD}/FIM_evaluation/FIM_inputs/HUC{huc}_flood{YYYYMMDD[HHMMSS]}
       Downloads ONLY the matched record(s) (and their gpkg) into that folder.
     """
+
     # Run setup_directories() only when actually needed.
     def _ensure_roots(self):
         if hasattr(self, "_roots_initialized"):
@@ -32,13 +43,14 @@ class FIMService:
 
     def availability(self, HUCID: str) -> str:
         from .utilis import availability as _avail
+
         return _avail(HUCID)
-    
+
     @staticmethod
     def _site_of(rec: Dict[str, Any]) -> str:
         s = str(rec.get("site") or "").strip()
         return s if s else "site_unknown"
-    
+
     def _find_any_owp_for_day(self, huc8: str, ymd: str) -> Optional[Path]:
         dirp = self.owp_root / f"flood_{huc8}" / f"{huc8}_inundation"
         if not dirp.exists():
@@ -46,7 +58,6 @@ class FIMService:
         for p in sorted(dirp.glob(f"NWM_{ymd}*_{huc8}_inundation.tif")):
             return p
         return None
-
 
     def query(
         self,
@@ -62,17 +73,38 @@ class FIMService:
 
         # strict set
         strict_matches = find_fims(
-            records, huc8=huc8, date_input=date_input, file_name=file_name,
-            relaxed_for_print=False
+            records,
+            huc8=huc8,
+            date_input=date_input,
+            file_name=file_name,
+            relaxed_for_print=False,
         )
 
         # relaxed set
         relaxed_matches = find_fims(
-            records, huc8=huc8, date_input=date_input, file_name=file_name,
-            start_date=start_date, end_date=end_date, relaxed_for_print=True
+            records,
+            huc8=huc8,
+            date_input=date_input,
+            file_name=file_name,
+            start_date=start_date,
+            end_date=end_date,
+            relaxed_for_print=True,
         )
 
-        status = "ok" if strict_matches else ("info" if (date_input is None and file_name is None and not start_date and not end_date) else "not_found")
+        status = (
+            "ok"
+            if strict_matches
+            else (
+                "info"
+                if (
+                    date_input is None
+                    and file_name is None
+                    and not start_date
+                    and not end_date
+                )
+                else "not_found"
+            )
+        )
 
         base_msg = f"Found {len(strict_matches)} record(s) for HUC {huc8}"
         if date_input:
@@ -82,10 +114,17 @@ class FIMService:
         if start_date or end_date:
             base_msg += f" in range [{start_date or '-∞'} , {end_date or '∞'}]"
         if not strict_matches:
-            base_msg = "No match for HUC " + huc8 \
-                    + (f" and '{date_input}'" if date_input else "") \
-                    + (f" and file '{file_name}'" if file_name else "") \
-                    + (f" in range [{start_date or '-∞'} , {end_date or '∞'}]" if (start_date or end_date) else "")
+            base_msg = (
+                "No match for HUC "
+                + huc8
+                + (f" and '{date_input}'" if date_input else "")
+                + (f" and file '{file_name}'" if file_name else "")
+                + (
+                    f" in range [{start_date or '-∞'} , {end_date or '∞'}]"
+                    if (start_date or end_date)
+                    else ""
+                )
+            )
 
         printable = format_records_for_print(relaxed_matches)
         return {
@@ -94,7 +133,7 @@ class FIMService:
             "matches": strict_matches,
             "printable": printable,
         }
-    
+
     # Trigger the process to download the benchmark FIM data and ensure/generate the OWP HAND FIM
     def process(
         self,
@@ -124,12 +163,19 @@ class FIMService:
             if file_name:
                 fname = file_name.strip()
                 cand_same_huc = [
-                    r for r in records
+                    r
+                    for r in records
                     if str(r.get("file_name", "")).strip() == fname
                     and str(r.get("huc8", "")).strip() == str(huc8).strip()
                 ]
-                cand_any_huc = [r for r in records if str(r.get("file_name", "")).strip() == fname]
-                rec = cand_same_huc[0] if cand_same_huc else (cand_any_huc[0] if cand_any_huc else None)
+                cand_any_huc = [
+                    r for r in records if str(r.get("file_name", "")).strip() == fname
+                ]
+                rec = (
+                    cand_same_huc[0]
+                    if cand_same_huc
+                    else (cand_any_huc[0] if cand_any_huc else None)
+                )
 
                 if rec is None:
                     msg = (
@@ -137,7 +183,12 @@ class FIMService:
                         + (f" and '{date_input}'" if date_input else "")
                         + f", and file '{file_name}' not found in catalog."
                     )
-                    return {"status": "not_found", "message": msg, "folders": [], "matches": []}
+                    return {
+                        "status": "not_found",
+                        "message": msg,
+                        "folders": [],
+                        "matches": [],
+                    }
 
                 root = Path(out_dir or os.getcwd())
                 inputs_root = root / "FIM_evaluation" / "FIM_inputs"
@@ -148,13 +199,15 @@ class FIMService:
                 folder = inputs_root / f"HUC{huc8}_{site}"
                 folder.mkdir(parents=True, exist_ok=True)
 
-
                 dl = download_fim_assets(rec, str(folder))
 
                 owp_path = None
                 if ensure_owp and date_input:
                     owp_path = self._ensure_owp_to(
-                        huc8, date_input, str(folder), generate_if_missing=generate_owp_if_missing
+                        huc8,
+                        date_input,
+                        str(folder),
+                        generate_if_missing=generate_owp_if_missing,
                     )
 
                 msg = (
@@ -171,19 +224,22 @@ class FIMService:
                 return {
                     "status": "assumed",
                     "message": msg,
-                    "folders": [{
-                        "label": site,
-                        "folder": str(folder),
-                        "records": [rec],
-                        "downloads": [{"record": rec, "downloads": dl}],
-                        "owp_path": owp_path,
-                    }],
+                    "folders": [
+                        {
+                            "label": site,
+                            "folder": str(folder),
+                            "records": [rec],
+                            "downloads": [{"record": rec, "downloads": dl}],
+                            "owp_path": owp_path,
+                        }
+                    ],
                     "matches": [rec],
                 }
 
             # No file_name provided → truly no match
-            msg = (f"No strict benchmark match for HUC {huc8}"
-                + (f" and '{date_input}'" if date_input else ""))
+            msg = f"No strict benchmark match for HUC {huc8}" + (
+                f" and '{date_input}'" if date_input else ""
+            )
             return {"status": "not_found", "message": msg, "folders": [], "matches": []}
 
         # Normal strict match path
@@ -209,7 +265,9 @@ class FIMService:
                 folder.mkdir(parents=True, exist_ok=True)
 
                 dl = download_fim_assets(rec, str(folder))
-                (dl_by_site.setdefault(site, [])).append({"record": rec, "downloads": dl})
+                (dl_by_site.setdefault(site, [])).append(
+                    {"record": rec, "downloads": dl}
+                )
                 if dl.get("tif") or dl.get("gpkg_files"):
                     total_downloaded += 1
 
@@ -220,24 +278,35 @@ class FIMService:
                 owp_path = None
                 if ensure_owp:
                     owp_path = self._ensure_owp_to(
-                        huc8, date_input, str(folder), generate_if_missing=generate_owp_if_missing
+                        huc8,
+                        date_input,
+                        str(folder),
+                        generate_if_missing=generate_owp_if_missing,
                     )
                     owp_src_copied_any = owp_src_copied_any or bool(owp_path)
 
-                folders_out.append({
-                    "label": site,                  
-                    "folder": str(folder),
-                    "records": [d["record"] for d in dl_records],
-                    "downloads": dl_records,
-                    "owp_path": owp_path,
-                })
+                folders_out.append(
+                    {
+                        "label": site,
+                        "folder": str(folder),
+                        "records": [d["record"] for d in dl_records],
+                        "downloads": dl_records,
+                        "owp_path": owp_path,
+                    }
+                )
 
-            msg_bits = [f"Downloaded {total_downloaded} benchmark item(s) into '{inputs_root}'."]
+            msg_bits = [
+                f"Downloaded {total_downloaded} benchmark item(s) into '{inputs_root}'."
+            ]
             if ensure_owp:
                 if owp_src_copied_any:
-                    msg_bits.append(f"OWP HAND FIM ensured for '{date_input}' (copied/generated to each site folder).")
+                    msg_bits.append(
+                        f"OWP HAND FIM ensured for '{date_input}' (copied/generated to each site folder)."
+                    )
                 else:
-                    msg_bits.append(f"OWP HAND FIM not found for '{date_input}' and was not generated.")
+                    msg_bits.append(
+                        f"OWP HAND FIM not found for '{date_input}' and was not generated."
+                    )
 
             return {
                 "status": "ok",
@@ -264,15 +333,17 @@ class FIMService:
                     folder.mkdir(parents=True, exist_ok=True)
 
                     dl = download_fim_assets(rec, str(folder))
-                    (dl_by_site.setdefault(site, [])).append({"record": rec, "downloads": dl})
+                    (dl_by_site.setdefault(site, [])).append(
+                        {"record": rec, "downloads": dl}
+                    )
                     if dl.get("tif") or dl.get("gpkg_files"):
                         total_downloaded += 1
 
                 # Convert this label to a real date/hour for OWP generation
                 try:
-                    if len(label) == 8:      # YYYYMMDD
+                    if len(label) == 8:  # YYYYMMDD
                         user_dt = f"{label[:4]}-{label[4:6]}-{label[6:]}"
-                    elif len(label) >= 10:   # YYYYMMDDHHMMSS or similar
+                    elif len(label) >= 10:  # YYYYMMDDHHMMSS or similar
                         user_dt = f"{label[:4]}-{label[4:6]}-{label[6:8]}T{label[8:10]}"
                     else:
                         user_dt = None
@@ -285,23 +356,36 @@ class FIMService:
                     for site in dl_by_site.keys():
                         folder = inputs_root / f"HUC{huc8}_{site}"
                         owp_path = self._ensure_owp_to(
-                            huc8, user_dt, str(folder), generate_if_missing=generate_owp_if_missing
+                            huc8,
+                            user_dt,
+                            str(folder),
+                            generate_if_missing=generate_owp_if_missing,
                         )
                         owp_src_copied_any = owp_src_copied_any or bool(owp_path)
 
                 # Record outputs
                 for site, dl_records in dl_by_site.items():
                     folder = inputs_root / f"HUC{huc8}_{site}"
-                    folders_out.append({
-                        "label": f"{label}:{site}",
-                        "folder": str(folder),
-                        "records": [d["record"] for d in dl_records],
-                        "downloads": dl_records,
-                        "owp_path": str(folder / f"NWM_{label}_{huc8}_inundation.tif") if owp_src_copied_any else None,
-                    })
+                    folders_out.append(
+                        {
+                            "label": f"{label}:{site}",
+                            "folder": str(folder),
+                            "records": [d["record"] for d in dl_records],
+                            "downloads": dl_records,
+                            "owp_path": (
+                                str(folder / f"NWM_{label}_{huc8}_inundation.tif")
+                                if owp_src_copied_any
+                                else None
+                            ),
+                        }
+                    )
 
-            msg_bits = [f"Downloaded {total_downloaded} benchmark item(s) into '{inputs_root}'."]
-            msg_bits.append("OWP HAND FIMs ensured per event (based on benchmark timestamps).")
+            msg_bits = [
+                f"Downloaded {total_downloaded} benchmark item(s) into '{inputs_root}'."
+            ]
+            msg_bits.append(
+                "OWP HAND FIMs ensured per event (based on benchmark timestamps)."
+            )
 
             return {
                 "status": "ok",
@@ -309,7 +393,6 @@ class FIMService:
                 "folders": folders_out,
                 "matches": strict_matches,
             }
-
 
     # Internals
     @staticmethod
@@ -329,7 +412,9 @@ class FIMService:
         hh = _to_hour_or_none(user_dt)
         return f"{day:%Y%m%d}" if hh is None else f"{day:%Y%m%d}{hh:02d}0000"
 
-    def _ensure_owp_to(self, huc8: str, user_dt: str, dest_dir: str, generate_if_missing: bool) -> Optional[str]:
+    def _ensure_owp_to(
+        self, huc8: str, user_dt: str, dest_dir: str, generate_if_missing: bool
+    ) -> Optional[str]:
         """
         Idempotent ensure:
         - If hour provided: look for the exact file.
@@ -369,7 +454,11 @@ class FIMService:
         return (ymd, None) if hh is None else (ymd, f"{hh:02d}0000")
 
     def _expected_owp_path(self, huc8: str, ymd: str, timestr: Optional[str]) -> Path:
-        name = f"NWM_{ymd}_{huc8}_inundation.tif" if timestr is None else f"NWM_{ymd}{timestr}_{huc8}_inundation.tif"
+        name = (
+            f"NWM_{ymd}_{huc8}_inundation.tif"
+            if timestr is None
+            else f"NWM_{ymd}{timestr}_{huc8}_inundation.tif"
+        )
         return self.owp_root / f"flood_{huc8}" / f"{huc8}_inundation" / name
 
     def _find_existing_owp_tif(self, huc8: str, user_dt: str) -> Optional[Path]:
@@ -396,7 +485,7 @@ class FIMService:
         - After running, return the produced path (exact hour if known; else first match for the day).
         """
         self._ensure_roots()
-        
+
         ymd, timestr = self._ymd_timestr_from_user(user_dt)
 
         # Skip if already there
@@ -456,18 +545,24 @@ def fim_lookup(
         )
         txt = q.get("printable") or ""
         if not txt.strip():
-            return ("No benchmark FIMs were matched with the information you provided.\n"
-                    f"(HUC={HUCID}"
-                    f"{', date='+date_input if date_input else ''}"
-                    f"{', file_name='+file_name if file_name else ''}"
-                    f"{', range=['+str(start_date)+' , '+str(end_date)+']' if (start_date or end_date) else ''})")
+            return (
+                "No benchmark FIMs were matched with the information you provided.\n"
+                f"(HUC={HUCID}"
+                f"{', date='+date_input if date_input else ''}"
+                f"{', file_name='+file_name if file_name else ''}"
+                f"{', range=['+str(start_date)+' , '+str(end_date)+']' if (start_date or end_date) else ''})"
+            )
 
         header = "Following are the available benchmark data"
         filt = []
-        if HUCID: filt.append(f"HUC {HUCID}")
-        if date_input: filt.append(f"date '{date_input}'")
-        if start_date or end_date: filt.append(f"range [{start_date or '-∞'} , {end_date or '∞'}]")
-        if file_name: filt.append(f"file '{file_name}'")
+        if HUCID:
+            filt.append(f"HUC {HUCID}")
+        if date_input:
+            filt.append(f"date '{date_input}'")
+        if start_date or end_date:
+            filt.append(f"range [{start_date or '-∞'} , {end_date or '∞'}]")
+        if file_name:
+            filt.append(f"file '{file_name}'")
         prefix = header + (" for " + ", ".join(filt) + ":\n" if filt else ":\n")
         return prefix + txt
 
@@ -481,5 +576,3 @@ def fim_lookup(
         file_name=file_name,
     )
     return rep.get("message", "")
-
-

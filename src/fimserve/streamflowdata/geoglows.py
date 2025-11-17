@@ -32,9 +32,9 @@ def getGLOWS_data(
     """
     Get GLOWS data for a specific event time and save it to a CSV file.
     """
-    
+
     value_time = pd.to_datetime(event_time)
-    
+
     if start_date is None or end_date is None:
         value_time = pd.to_datetime(event_time)
 

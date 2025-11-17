@@ -7,6 +7,7 @@ import teehr.fetching.nwm.retrospective_points as nwm_retro
 
 from ..datadownload import setup_directories
 
+
 def getdischargeforspecifiedtime(
     retrospective_dir, location_ids, specific_date, data_dir, huc, date_type
 ):
@@ -39,7 +40,8 @@ def getdischargeforspecifiedtime(
         formatted_datetime = specific_date.strftime("%Y%m%d")
     else:
         filtered_df = all_data[
-            (all_data["location_id"].isin(location_ids)) & (all_data["value_time"] == specific_date)
+            (all_data["location_id"].isin(location_ids))
+            & (all_data["value_time"] == specific_date)
         ].copy()
         filtered_df.loc[:, "feature_id"] = filtered_df["location_id"].str.replace(
             "nwm30-", ""
@@ -50,7 +52,9 @@ def getdischargeforspecifiedtime(
         formatted_datetime = specific_date.strftime("%Y%m%d%H%M%S")
 
     # Save to a CSV file with the date and HUC as filename
-    finalHANDdischarge_dir = os.path.join(data_dir, f"NWM_{formatted_datetime}_{huc}.csv")
+    finalHANDdischarge_dir = os.path.join(
+        data_dir, f"NWM_{formatted_datetime}_{huc}.csv"
+    )
     discharge_data.to_csv(finalHANDdischarge_dir, index=False)
     print(f"Discharge values saved to {finalHANDdischarge_dir}")
 
@@ -105,7 +109,10 @@ def determinedatatimeformat(date_str):
         except ValueError:
             return "invalid"
 
-def getNWMretrospectivedata( huc=None, start_date=None, end_date=None, value_times=None, huc_event_dict=None ):
+
+def getNWMretrospectivedata(
+    huc=None, start_date=None, end_date=None, value_times=None, huc_event_dict=None
+):
     """
     Fetches NWM retrospective discharge data.
     - If huc_event_dict is provided, extracts data for multiple HUCs with specific timestamps.
@@ -175,29 +182,40 @@ def getNWMretrospectivedata( huc=None, start_date=None, end_date=None, value_tim
             print(f"Processing complete for {time} of {huc}.")
 
     else:
-            if not huc:
-                raise ValueError("You must provide a valid 'huc'.")
-            if not ((start_date and end_date) or value_times):
-                raise ValueError("You must provide either a date range (start_date and end_date) or a list of value_times.")
+        if not huc:
+            raise ValueError("You must provide a valid 'huc'.")
+        if not ((start_date and end_date) or value_times):
+            raise ValueError(
+                "You must provide either a date range (start_date and end_date) or a list of value_times."
+            )
 
-            HUC_dir = os.path.join(output_dir, f"flood_{huc}")
-            featureID_dir = os.path.join(HUC_dir, "feature_IDs.csv")
+        HUC_dir = os.path.join(output_dir, f"flood_{huc}")
+        featureID_dir = os.path.join(HUC_dir, "feature_IDs.csv")
 
-            if start_date and end_date:
-                start_date_obj = pd.to_datetime(start_date)
-                end_date_obj = pd.to_datetime(end_date)
+        if start_date and end_date:
+            start_date_obj = pd.to_datetime(start_date)
+            end_date_obj = pd.to_datetime(end_date)
 
-                if start_date_obj == end_date_obj and determinedatatimeformat(start_date) == "date":
-                    print("Please provide a start and end date at least 1 day apart or mention hours.")
-                    return
-                elif start_date_obj > end_date_obj:
-                    print("Start date cannot be after the end date.")
-                    return
+            if (
+                start_date_obj == end_date_obj
+                and determinedatatimeformat(start_date) == "date"
+            ):
+                print(
+                    "Please provide a start and end date at least 1 day apart or mention hours."
+                )
+                return
+            elif start_date_obj > end_date_obj:
+                print("Start date cannot be after the end date.")
+                return
 
-                getnwm_discharge(start_date, end_date, featureID_dir, HUC_dir)
+            getnwm_discharge(start_date, end_date, featureID_dir, HUC_dir)
 
-            if value_times:
-                retrospective_dir = os.path.join(HUC_dir, "discharge", "nwm30_retrospective")
-                for time in value_times:
-                    datetype = determinedatatimeformat(time)
-                    getdischargeforspecifiedtime(retrospective_dir, featureID_dir, time, data_dir, huc, datetype)
+        if value_times:
+            retrospective_dir = os.path.join(
+                HUC_dir, "discharge", "nwm30_retrospective"
+            )
+            for time in value_times:
+                datetype = determinedatatimeformat(time)
+                getdischargeforspecifiedtime(
+                    retrospective_dir, featureID_dir, time, data_dir, huc, datetype
+                )

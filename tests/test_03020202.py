@@ -2,8 +2,9 @@ import fimserve as fm
 import pandas as pd
 
 huc = "03020202"
-    
-#Run the test function
+
+
+# Run the test function
 def test_runfim():
 
     # Download the data
@@ -32,7 +33,6 @@ def test_runfim():
     # for fixed date or day data
     value_times = ["2016-01-02"]
     fm.getNWMretrospectivedata(huc, start_date, end_date, value_times)
-
 
     # # #Get USGS data
     fm.getUSGSsitedata(huc, start_date, end_date)

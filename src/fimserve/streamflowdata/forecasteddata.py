@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from ..datadownload import setup_directories
 
+
 def adjust_hour(hour, forecast_range):
     hour = int(hour)
     if forecast_range == "shortrange":
@@ -23,16 +24,24 @@ def adjust_hour(hour, forecast_range):
     adjusted_hour = max([h for h in valid_hours if h <= hour] or [valid_hours[0]])
     return adjusted_hour
 
-#Delete the forecast directory if it is empty
+
+# Delete the forecast directory if it is empty
 import os, shutil, stat, time
+
 
 def _rmtree(path: str, retries: int = 3, delay: float = 0.2) -> None:
     """Robust rmtree: clears read-only bits and retries briefly."""
+
     def _onerror(func, p, exc_info):
-        try: os.chmod(p, stat.S_IWRITE)
-        except Exception: pass
-        try: func(p)
-        except Exception: pass
+        try:
+            os.chmod(p, stat.S_IWRITE)
+        except Exception:
+            pass
+        try:
+            func(p)
+        except Exception:
+            pass
+
     for i in range(retries):
         try:
             if os.path.exists(path):
@@ -43,7 +52,10 @@ def _rmtree(path: str, retries: int = 3, delay: float = 0.2) -> None:
                 raise
             time.sleep(delay)
 
-def cleanup_download_tree(download_dir: str, final_date_output_dir: str, csv_tmp_dir: str) -> None:
+
+def cleanup_download_tree(
+    download_dir: str, final_date_output_dir: str, csv_tmp_dir: str
+) -> None:
     """Remove staging CSVs, the dated netCDF dir, the netCDF root, and the forecast folder."""
     _rmtree(csv_tmp_dir)
     _rmtree(final_date_output_dir)
@@ -61,7 +73,8 @@ def download_public_file(url, destination_path):
             f.write(response.content)
     except requests.exceptions.RequestException as e:
         raise e
-    
+
+
 def download_nc_files(date_str, current_hour, download_dir, url_base, forecast_range):
     date_obj = datetime.strptime(date_str, "%Y%m%d")
     start_date = datetime(2018, 9, 17)
@@ -90,7 +103,7 @@ def download_nc_files(date_str, current_hour, download_dir, url_base, forecast_r
     os.makedirs(date_output_dir, exist_ok=True)
 
     # Possible File patterns for each forecast type
-    expected_forecast_files = [] 
+    expected_forecast_files = []
     if forecast_type == "short_range":
         expected_forecast_files = [
             f"nwm.t{current_hour:02d}z.short_range.channel_rt.f{hour:03d}.conus.nc"
@@ -114,25 +127,29 @@ def download_nc_files(date_str, current_hour, download_dir, url_base, forecast_r
 
     successful_downloads = []
 
-    for forecast_file in expected_forecast_files: # Use the newly defined list
+    for forecast_file in expected_forecast_files:  # Use the newly defined list
         file_url = os.path.join(url, forecast_file)
         file_path = os.path.join(date_output_dir, forecast_file)
 
         try:
             download_public_file(file_url, file_path)
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 0: 
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                 successful_downloads.append(forecast_file)
         except requests.exceptions.RequestException as e:
             print(f"Failed to download {forecast_file}: {e}")
 
     # Return True only if ALL expected files were successfully downloaded
-    if len(successful_downloads) == len(expected_forecast_files) and len(expected_forecast_files) > 0:
+    if (
+        len(successful_downloads) == len(expected_forecast_files)
+        and len(expected_forecast_files) > 0
+    ):
         return True, date_output_dir
     else:
         for downloaded_file in os.listdir(date_output_dir):
             os.remove(os.path.join(date_output_dir, downloaded_file))
-        os.rmdir(date_output_dir) 
+        os.rmdir(date_output_dir)
         return False, None
+
 
 # Process netcf and get the file in CSV format and extract all feature_is's discharge data
 def processnetCDF(netcdf_file_path, filter_df, output_folder_path):
@@ -259,6 +276,7 @@ def ProcessForecasts(
         sorted_file_path = os.path.join(data_dir, sorted_file_name)
         sorted_df.to_csv(sorted_file_path, index=False)
 
+
 def main(
     download_dir,
     output_csv_filename,
@@ -280,26 +298,34 @@ def main(
     """ This block auto-selects the latest available forecast hour if not provided.
     For shortrange, it checks if the current UTC minute is before 45—if so, it uses the previous hour; otherwise, 
     it uses the current hour. For other forecast types, it picks the latest valid issue time (e.g., 00, 06, 12, 18 UTC) using adjust_hour()"""
-    current_download_date = forecast_date if forecast_date else datetime.now(timezone.utc).strftime("%Y%m%d")
+    current_download_date = (
+        forecast_date
+        if forecast_date
+        else datetime.now(timezone.utc).strftime("%Y%m%d")
+    )
     initial_utc_now = datetime.now(timezone.utc)
 
     if hour is None:
         if initial_utc_now.minute < 45 and forecast_range == "shortrange":
-            current_download_hour = adjust_hour(initial_utc_now.hour - 1, forecast_range)
+            current_download_hour = adjust_hour(
+                initial_utc_now.hour - 1, forecast_range
+            )
         else:
             current_download_hour = adjust_hour(initial_utc_now.hour, forecast_range)
     else:
         original_hour = hour
         current_download_hour = adjust_hour(hour, forecast_range)
         if current_download_hour != original_hour:
-            print(f"Adjusted forecast hour from {original_hour} to {current_download_hour} for {forecast_range} as per the forecast range and data availability rules.")
+            print(
+                f"Adjusted forecast hour from {original_hour} to {current_download_hour} for {forecast_range} as per the forecast range and data availability rules."
+            )
     print(f"Starting download attempts...")
 
-    '''Retry downloading forecast files by decrementing the forecast hour based on forecast range:
+    """Retry downloading forecast files by decrementing the forecast hour based on forecast range:
     - shortrange: tries every past hour (up to 24 hours)
     - mediumrange: tries every past 3 hours (up to 48 hours)
     - longrange: tries every past 6 hours (up to 48 hours)
-    If hour wraps around to previous day, the forecast date is decremented accordingly.'''
+    If hour wraps around to previous day, the forecast date is decremented accordingly."""
     success = False
     if forecast_range == "shortrange":
         decrement = 1
@@ -309,39 +335,53 @@ def main(
         max_attempts = 16  # 2 days (16 × 3 = 48 hrs)
     elif forecast_range == "longrange":
         decrement = 6
-        max_attempts = 8   # 2 days (8 × 6 = 48 hrs)
+        max_attempts = 8  # 2 days (8 × 6 = 48 hrs)
     else:
         decrement = 1
         max_attempts = 24
 
     attempts = 0
-    final_date_output_dir = None # Initialize to None
+    final_date_output_dir = None  # Initialize to None
 
     while not success and attempts < max_attempts:
-            print(f"Attempt {attempts + 1}/{max_attempts}: Trying date {current_download_date}, hour {current_download_hour:02d}Z for {forecast_range}...")
+        print(
+            f"Attempt {attempts + 1}/{max_attempts}: Trying date {current_download_date}, hour {current_download_hour:02d}Z for {forecast_range}..."
+        )
 
-            success, retrieved_date_output_dir = download_nc_files( 
-                current_download_date, current_download_hour, download_dir, url_base, forecast_range
+        success, retrieved_date_output_dir = download_nc_files(
+            current_download_date,
+            current_download_hour,
+            download_dir,
+            url_base,
+            forecast_range,
+        )
+
+        if success:
+            final_date_output_dir = retrieved_date_output_dir
+            print(
+                f"Successfully downloaded a complete set for {current_download_date} at {current_download_hour:02d}Z."
             )
-            
-            if success:
-                final_date_output_dir = retrieved_date_output_dir
-                print(f"Successfully downloaded a complete set for {current_download_date} at {current_download_hour:02d}Z.")
-                break 
-            else:
-                prev_hour_for_log = current_download_hour 
-                current_download_hour = (current_download_hour - decrement) % 24
-                if current_download_hour > prev_hour_for_log: 
-                    date_obj = datetime.strptime(current_download_date, "%Y%m%d") - timedelta(days=1)
-                    current_download_date = date_obj.strftime("%Y%m%d")
-                attempts += 1
-                # Updated print statement here
-                print(f"Download failed for {current_download_date} at {prev_hour_for_log:02d}Z. No complete data found for this period. Retrying by going back {decrement} hour(s) for {forecast_range}.")
-                continue
-        
+            break
+        else:
+            prev_hour_for_log = current_download_hour
+            current_download_hour = (current_download_hour - decrement) % 24
+            if current_download_hour > prev_hour_for_log:
+                date_obj = datetime.strptime(
+                    current_download_date, "%Y%m%d"
+                ) - timedelta(days=1)
+                current_download_date = date_obj.strftime("%Y%m%d")
+            attempts += 1
+            # Updated print statement here
+            print(
+                f"Download failed for {current_download_date} at {prev_hour_for_log:02d}Z. No complete data found for this period. Retrying by going back {decrement} hour(s) for {forecast_range}."
+            )
+            continue
+
     # After the loop, check final_date_output_dir
-    if not success or final_date_output_dir is None: 
-        print("No complete discharge data found after all attempts, try few hours or a day back!")
+    if not success or final_date_output_dir is None:
+        print(
+            "No complete discharge data found after all attempts, try few hours or a day back!"
+        )
         try:
             netcdf_root = os.path.join(download_dir, "netCDF")
             if os.path.exists(netcdf_root):
@@ -356,7 +396,7 @@ def main(
     filter_df = pd.read_csv(filter_csv_file_path)
 
     # Process files from the *successful* directory
-    if os.path.exists(final_date_output_dir): 
+    if os.path.exists(final_date_output_dir):
         for root, _, files in os.walk(final_date_output_dir):
             for filename in files:
                 if filename.endswith(".nc"):
@@ -365,14 +405,21 @@ def main(
 
     # Pass the current_download_hour and current_download_date that were successful
     ProcessForecasts(
-        CSVFILES, current_download_date, current_download_hour, forecast_range, sort_by, data_dir, HUC
+        CSVFILES,
+        current_download_date,
+        current_download_hour,
+        forecast_range,
+        sort_by,
+        data_dir,
+        HUC,
     )
-    
+
     print(f"The final discharge values saved to {data_dir}")
     try:
         cleanup_download_tree(download_dir, final_date_output_dir, CSVFILES)
     except Exception as e:
         print(f"Cleanup warning: {e}")
+
 
 def getNWMForecasteddata(
     huc, forecast_range, forecast_date=None, hour=None, sort_by="maximum"

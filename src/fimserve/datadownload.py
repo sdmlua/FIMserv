@@ -17,6 +17,7 @@ def setup_directories():
 
     return code_dir, data_dir, output_dir
 
+
 def clone_repository(code_dir, version=None):
     repo_path = os.path.join(code_dir)
     repo_url = "https://github.com/NOAA-OWP/inundation-mapping.git"
@@ -65,7 +66,10 @@ def download_data(huc_number, base_dir, version=None):
     hydrotable_path = os.path.join(output_dir, "branch_ids.csv")
     fim_inputs_path = os.path.join(base_dir, f"flood_{huc_number}", "fim_inputs.csv")
 
-    with open(hydrotable_path, "r") as infile, open(fim_inputs_path, "w", newline="") as outfile:
+    with (
+        open(hydrotable_path, "r") as infile,
+        open(fim_inputs_path, "w", newline="") as outfile,
+    ):
         reader = csv.reader(infile)
         writer = csv.writer(outfile)
         for row in reader:

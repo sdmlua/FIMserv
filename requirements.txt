@@ -628,7 +628,7 @@ propcache==0.4.0
     # via yarl
 proto-plus==1.26.1
     # via google-api-core
-protobuf==5.28.3
+protobuf>=5.29.5
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -866,7 +866,7 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 stack-data==0.6.3
     # via ipython
-starlette==0.48.0
+starlette==0.49.1
     # via sphinx-autobuild
 statsmodels==0.14.5
     # via arch

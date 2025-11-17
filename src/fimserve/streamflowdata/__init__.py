@@ -7,4 +7,9 @@ from .forecasteddata import getNWMForecasteddata
 from .usgsdata import getUSGSsitedata
 from .geoglows import getGEOGLOWSstreamflow
 
-__all__ = ["getNWMretrospectivedata", "getNWMForecasteddata", "getGEOGLOWSstreamflow", "getUSGSsitedata"]
+__all__ = [
+    "getNWMretrospectivedata",
+    "getNWMForecasteddata",
+    "getGEOGLOWSstreamflow",
+    "getUSGSsitedata",
+]

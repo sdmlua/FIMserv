@@ -8,8 +8,10 @@ from ipywidgets import HTML
 
 from .datadownload import setup_directories
 
+
 def InitializeGEE(projectID=None):
     import ee
+
     try:
         ee.Authenticate()
         if projectID:
@@ -20,7 +22,9 @@ def InitializeGEE(projectID=None):
         print(f"Error initializing GEE: {e}")
 
 
-def FIMVizualizer(raster_path, catchment_gpkg, zoom_level, huc_id, boundary_color="#800080"): 
+def FIMVizualizer(
+    raster_path, catchment_gpkg, zoom_level, huc_id, boundary_color="#800080"
+):
     with rasterio.open(raster_path) as src:
         data = src.read(1)
         binary_data = np.where(data > 0, 1, 0)
@@ -52,13 +56,18 @@ def FIMVizualizer(raster_path, catchment_gpkg, zoom_level, huc_id, boundary_colo
     Map.add_gdf(
         dissolved_catchment,
         layer_name=f"HUC8: {huc_id}",
-        style={"fillColor": "none", "color": boundary_color, "weight": 2.5, "dashArray": "5, 5"},
+        style={
+            "fillColor": "none",
+            "color": boundary_color,
+            "weight": 2.5,
+            "dashArray": "5, 5",
+        },
     )
 
     # Binary Raster with Blue Colormap
     Map.add_raster(
         new_raster_path,
-        colormap=["#ffffff", "#0000ff"],  
+        colormap=["#ffffff", "#0000ff"],
         layer_name="Flood Inundation Extent",
         nodata=0,
     )
@@ -83,7 +92,9 @@ def FIMVizualizer(raster_path, catchment_gpkg, zoom_level, huc_id, boundary_colo
     return Map
 
 
-def vizualizeFIM(inundation_raster, huc, zoom_level, projectID=None, boundary_color="#800080"):
+def vizualizeFIM(
+    inundation_raster, huc, zoom_level, projectID=None, boundary_color="#800080"
+):
     code_dir, data_dir, output_dir = setup_directories()
     HUCBoundary = os.path.join(
         output_dir,
@@ -94,4 +105,6 @@ def vizualizeFIM(inundation_raster, huc, zoom_level, projectID=None, boundary_co
         "gw_catchments_reaches_filtered_addedAttributes_0.gpkg",
     )
     InitializeGEE(projectID)
-    return FIMVizualizer(inundation_raster, HUCBoundary, zoom_level, huc, boundary_color)
+    return FIMVizualizer(
+        inundation_raster, HUCBoundary, zoom_level, huc, boundary_color
+    )

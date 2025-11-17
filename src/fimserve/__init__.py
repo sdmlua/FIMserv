@@ -31,11 +31,11 @@ from .vizualizationFIM import vizualizeFIM
 # Statistics
 from .statistics.calculatestatistics import CalculateStatistics
 
-#For intersected HUC8 boundary
+# For intersected HUC8 boundary
 from .intersectedHUC import getIntersectedHUC8ID
 
 
-#evaluation of FIM
+# evaluation of FIM
 from .fimevaluation.fims_setup import FIMService, fim_lookup
 
 

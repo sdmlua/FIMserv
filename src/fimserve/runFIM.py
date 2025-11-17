@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from .datadownload import setup_directories
 
+
 def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
     original_dir = os.getcwd()
     try:
@@ -33,10 +34,14 @@ def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
         Command = [
             sys.executable,
             "inundate_mosaic_wrapper.py",
-            "-y", HUC_dir,
-            "-u", HUC_code,
-            "-f", csv_path,
-            "-i", inundation_file,
+            "-y",
+            HUC_dir,
+            "-u",
+            HUC_code,
+            "-f",
+            csv_path,
+            "-i",
+            inundation_file,
         ]
 
         if depth:
@@ -64,15 +69,17 @@ def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
             print(f"Inundation mapping for {HUC_code} completed successfully.")
 
             if os.path.exists(inundation_file):
-                dest_file = os.path.join(inundation_dir, os.path.basename(inundation_file))
+                dest_file = os.path.join(
+                    inundation_dir, os.path.basename(inundation_file)
+                )
                 os.makedirs(inundation_dir, exist_ok=True)
                 try:
                     os.replace(inundation_file, dest_file)
                 except Exception:
                     if os.path.exists(dest_file):
                         os.remove(dest_file)
-                    shutil.move(inundation_file, dest_file) 
-                    
+                    shutil.move(inundation_file, dest_file)
+
             if depth and depth_file and os.path.exists(depth_file):
                 dest_depth = os.path.join(inundation_dir, os.path.basename(depth_file))
                 try:
@@ -90,9 +97,10 @@ def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
     finally:
         os.chdir(original_dir)
 
+
 def runOWPHANDFIM(huc, depth=False, version=None):
     code_dir, data_dir, output_dir = setup_directories()
-    
+
     discharge = glob.glob(os.path.join(data_dir, f"*{huc}*.csv"))
     for file in discharge:
         runfim(code_dir, output_dir, huc, file, depth=depth)

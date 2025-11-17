@@ -1,5 +1,6 @@
-'''This utility function contains how to retrieve all the necessary metadata from the s3 bucket during evaluation
-for HAND FIM model outputs along with other supporting functions'''
+"""This utility function contains how to retrieve all the necessary metadata from the s3 bucket during evaluation
+for HAND FIM model outputs along with other supporting functions"""
+
 from __future__ import annotations
 import os, re, json, datetime as dt
 from typing import List, Dict, Any, Optional
@@ -11,15 +12,19 @@ from botocore.config import Config
 
 # constants
 BUCKET = "sdmlab"
-CATALOG_KEY = "FIM_Database/FIM_Viz/catalog_core.json"  # Path of the json file in the s3 bucket
+CATALOG_KEY = (
+    "FIM_Database/FIM_Viz/catalog_core.json"  # Path of the json file in the s3 bucket
+)
 
 # s3 client
 _S3 = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+
 
 # helpers for direct S3 file links
 def s3_http_url(bucket: str, key: str) -> str:
     """Build a public-style S3 HTTPS URL."""
     return f"https://{bucket}.s3.amazonaws.com/{urllib.parse.quote(key, safe='/')}"
+
 
 # utils
 _YMD_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -27,11 +32,13 @@ _YMD_COMPACT_RE = re.compile(r"^\d{8}$")
 _YMDH_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}$")
 _YMDHMS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$")
 
+
 def _normalize_user_dt(s: str) -> str:
     s = s.strip()
     s = s.replace("/", "-")
     s = re.sub(r"\s+", " ", s)
     return s
+
 
 def _to_date(s: str) -> dt.date:
     s = _normalize_user_dt(s)
@@ -46,6 +53,7 @@ def _to_date(s: str) -> dt.date:
         if m:
             return dt.datetime.fromisoformat(f"{m.group(1)} {m.group(2)}:00:00").date()
         raise ValueError(f"Bad date format: {s}")
+
 
 def _to_hour_or_none(s: str) -> Optional[int]:
     s = _normalize_user_dt(s)
@@ -63,6 +71,7 @@ def _to_hour_or_none(s: str) -> Optional[int]:
             return int(m2.group(1))
         return None
 
+
 def _record_day(rec: Dict[str, Any]) -> Optional[dt.date]:
     ymd = rec.get("date_ymd")
     if isinstance(ymd, str):
@@ -78,6 +87,7 @@ def _record_day(rec: Dict[str, Any]) -> Optional[dt.date]:
             return None
     return None
 
+
 def _record_hour_or_none(rec: Dict[str, Any]) -> Optional[int]:
     raw = rec.get("date_of_flood")
     if isinstance(raw, str) and "T" in raw and len(raw) >= 11:
@@ -86,6 +96,7 @@ def _record_hour_or_none(rec: Dict[str, Any]) -> Optional[int]:
         except Exception:
             return None
     return None
+
 
 # Printing helpers
 def _pretty_date_for_print(rec: Dict[str, Any]) -> str:
@@ -98,6 +109,7 @@ def _pretty_date_for_print(rec: Dict[str, Any]) -> str:
     if isinstance(raw, str) and len(raw) >= 8:
         return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
     return "unknown"
+
 
 def _context_str(
     huc8: Optional[str] = None,
@@ -131,12 +143,19 @@ def _context_str(
 
     return ", ".join(parts) if parts else "your filters"
 
-def format_records_for_print(records: List[Dict[str, Any]], context: Optional[str] = None) -> str:
+
+def format_records_for_print(
+    records: List[Dict[str, Any]], context: Optional[str] = None
+) -> str:
     if not records:
         ctx = context or "your filters"
         return f"Benchmark FIMs were not matched for {ctx}."
 
-    header = f"Following are the available benchmark data for {context}:\n" if context else ""
+    header = (
+        f"Following are the available benchmark data for {context}:\n"
+        if context
+        else ""
+    )
 
     blocks: List[str] = []
     for r in records:
@@ -154,10 +173,12 @@ def format_records_for_print(records: List[Dict[str, Any]], context: Optional[st
 
     return (header + "\n\n".join(blocks)).strip()
 
+
 # S3 and json catalog
 def load_catalog_core() -> Dict[str, Any]:
     obj = _S3.get_object(Bucket=BUCKET, Key=CATALOG_KEY)
     return json.loads(obj["Body"].read().decode("utf-8", "replace"))
+
 
 def _list_prefix(prefix: str) -> List[str]:
     keys: List[str] = []
@@ -167,10 +188,12 @@ def _list_prefix(prefix: str) -> List[str]:
             keys.append(obj["Key"])
     return keys
 
+
 def _download(bucket: str, key: str, dest_path: str) -> str:
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     _S3.download_file(bucket, key, dest_path)
     return dest_path
+
 
 # Search FIMs record in database
 def find_fims(
@@ -238,7 +261,9 @@ def find_fims(
             if d1 and r_day > d1:
                 continue
             out.append(r)
-        out.sort(key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", ""))))
+        out.sort(
+            key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", "")))
+        )
         return out
 
     if date_input and _to_hour_or_none(date_input) is None:
@@ -248,7 +273,9 @@ def find_fims(
             r_day = _record_day(r)
             if r_day == target_day:
                 out.append(r)
-        out.sort(key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", ""))))
+        out.sort(
+            key=lambda x: (str(x.get("date_of_flood", "")), str(x.get("file_name", "")))
+        )
         return out
 
     return find_fims(
@@ -260,6 +287,7 @@ def find_fims(
         end_date=None,
         relaxed_for_print=False,
     )
+
 
 def summarize_huc_availability(records: List[Dict[str, Any]], huc8: str) -> str:
     huc8 = str(huc8).strip()
@@ -274,7 +302,9 @@ def summarize_huc_availability(records: List[Dict[str, Any]], huc8: str) -> str:
             with_raw.append(r)
 
     if not with_raw:
-        rps = sorted({str(r.get("return_period")) for r in recs if r.get("return_period")})
+        rps = sorted(
+            {str(r.get("return_period")) for r in recs if r.get("return_period")}
+        )
         if rps:
             return f"No real flood-based benchmarks on HUC {huc8}. Only synthetic return periods available: {', '.join(rps)}."
         return f"No real flood-based benchmarks on HUC {huc8}."
@@ -295,12 +325,14 @@ def summarize_huc_availability(records: List[Dict[str, Any]], huc8: str) -> str:
         parts.append("hourly: " + ", ".join(sorted(hour_set)))
     return f"Available benchmark dates on HUC {huc8}: " + " | ".join(parts)
 
+
 # Get the files from s3 bucket
 def _folder_from_record(rec: Dict[str, Any]) -> str:
     s3_key = rec.get("s3_key")
     if not s3_key or "/" not in s3_key:
         raise ValueError("Record lacks s3_key to derive folder")
     return s3_key.rsplit("/", 1)[0] + "/"
+
 
 def _tif_key_from_record(rec: Dict[str, Any]) -> Optional[str]:
     tif_url = rec.get("tif_url")
@@ -310,6 +342,7 @@ def _tif_key_from_record(rec: Dict[str, Any]) -> Optional[str]:
     if not fname:
         return None
     return _folder_from_record(rec) + fname
+
 
 def download_fim_assets(record: Dict[str, Any], dest_dir: str) -> Dict[str, Any]:
     """
@@ -337,6 +370,7 @@ def download_fim_assets(record: Dict[str, Any], dest_dir: str) -> Dict[str, Any]
 
     return out
 
+
 # Make the huc_event_dict for FIM generation for multiple events on one HUC
 def build_huc_event_dict(records: List[Dict[str, Any]]) -> Dict[str, List[str]]:
     d: Dict[str, List[str]] = {}
@@ -352,9 +386,11 @@ def build_huc_event_dict(records: List[Dict[str, Any]]) -> Dict[str, List[str]]:
         d[k] = sorted(set(d[k]))
     return d
 
+
 def availability(HUC8: str) -> str:
     catalog = load_catalog_core()
     return summarize_huc_availability(catalog.get("records", []), HUC8)
+
 
 # benchmark FIM find and download function
 def bmFIMFindandDownload(
@@ -409,14 +445,24 @@ def bmFIMFindandDownload(
 
     # No strict matches
     if not strict_matches:
-        status = "info" if (date_input is None and file_name is None and not start_date and not end_date) else "not_found"
+        status = (
+            "info"
+            if (
+                date_input is None
+                and file_name is None
+                and not start_date
+                and not end_date
+            )
+            else "not_found"
+        )
         return {
             "status": status,
             "message": (
                 f"No match for HUC {HUC8}"
                 + (f" and '{date_input}'" if date_input else "")
                 + (f" and file '{file_name}'" if file_name else "")
-                + ".\n" + summarize_huc_availability(records, HUC8)
+                + ".\n"
+                + summarize_huc_availability(records, HUC8)
             ),
             "matches": [],
             "printable": printable,
@@ -430,7 +476,8 @@ def bmFIMFindandDownload(
                 f"Found {len(strict_matches)} record(s) for HUC {HUC8}"
                 + (f" and '{date_input}'" if date_input else "")
                 + (f" and file '{file_name}'" if file_name else "")
-                + ".\n" + summarize_huc_availability(records, HUC8)
+                + ".\n"
+                + summarize_huc_availability(records, HUC8)
             ),
             "matches": [{"record": r, "downloads": None} for r in strict_matches],
             "printable": printable,
