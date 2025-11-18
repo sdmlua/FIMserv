@@ -37,6 +37,7 @@ from .intersectedHUC import getIntersectedHUC8ID
 
 # evaluation of FIM
 from .fimevaluation.fims_setup import FIMService, fim_lookup
+from .fimevaluation.run_fimeval import run_evaluation
 
 
 __all__ = [
@@ -57,4 +58,5 @@ __all__ = [
     "getIntersectedHUC8ID",
     "FIMService",
     "fim_lookup",
+    "run_evaluation",
 ]

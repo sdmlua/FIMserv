@@ -523,7 +523,7 @@ def fim_lookup(
     date_input: Optional[str] = None,
     file_name: Optional[str] = None,
     run_handfim: bool = False,
-    out_dir: Optional[str] = None,
+    out_dir: Optional[str] = None,  # Directory to place downloaded/generated files
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
 ) -> str:
