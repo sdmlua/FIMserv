@@ -35,3 +35,10 @@ This framework is designed to:
 - Provide first responders with up-to-date flood information
 - Inform public warnings and evacuation strategies
 - Aid in post-event damage assessments and recovery planning
+
+## Reference
+The trained Surrogate Model that is being applied for the enhancement of the FIMserv derieved Low-Fidelity results comes out of the following research, which is currently in review. 
+
+**Preprint** — **Supath Dhital**, Sagy Cohen, Parvaneh Nikrou, et al.  
+Enhancement of low-fidelity flood inundation mapping through surrogate modeling. *ESS Open Archive*, November 03, 2025.  
+[https://doi.org/10.22541/essoar.176218121.12875584/v1](https://doi.org/10.22541/essoar.176218121.12875584/v1)
