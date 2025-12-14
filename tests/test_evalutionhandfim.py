@@ -19,7 +19,7 @@ def test_bm_fimlookup():
 def test_run_fimeval():
     fm.run_evaluation(
         Main_dir="./FIMserv/test",   #If user use their own input directory to where FIM outputs; basically out_dir in fim_lookup us Main_dir here
-        output_dir= "./FIMserv/outcome", #Folder where evaluation results will be saved
+        output_dir= None, #Folder where evaluation results will be saved
         shapefile_path= None, #AOI shapefile or vector file used to clip data during evaluation. Internally used the geopackage within folder.
         PWB_dir= None, #Directory containing the Permanent Water Bodies.
         building_footprint= "./AOI/building_footprint.gpkg", #Local building footprint dataset (GeoJSON/Shapefile) for building-level exposure evaluation.
