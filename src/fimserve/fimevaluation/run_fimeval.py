@@ -49,14 +49,14 @@ class run_evaluation:
         Evalwith_BF: bool = False,  #If user want to run evaluation with building footprint
         ):
         if Main_dir is None:
-            self.Main_dir = os.path.join(os.getcwd(), "FIM_Evaluation", "FIM_inputs")
+            self.Main_dir = os.path.join(os.getcwd(), "FIMevaluation_inputs")
         else:
             self.Main_dir = Main_dir
         
         self.shapefile_path = shapefile_path
         
         if output_dir is None:
-            self.output_dir = os.path.join(os.getcwd(), "FIM_Evaluation", "Evaluation_Results")
+            self.output_dir = os.path.join(os.getcwd(), "FIMevaluation_results")
         else:
             self.output_dir = output_dir
             
@@ -91,12 +91,12 @@ class run_evaluation:
             fe.PrintContingencyMap(
                 main_dir=self.Main_dir,
                 method_name=self.method_name,
-                output_dir=self.output_dir,
+                out_dir=self.output_dir,
             )
             fe.PlotEvaluationMetrics(
                 main_dir=self.Main_dir,
                 method_name=self.method_name,
-                output_dir=self.output_dir,
+                out_dir=self.output_dir,
             )
         
         if self.Evalwith_BF:
@@ -105,7 +105,7 @@ class run_evaluation:
                     main_dir=self.Main_dir,
                     method_name=self.method_name,
                     output_dir=self.output_dir,
-                    countryISO=self.countryISO,
+                    country=self.countryISO,
                     geeprojectID=self.geeprojectID,
                     building_footprint=self.building_footprint,
                 )

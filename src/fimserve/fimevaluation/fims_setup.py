@@ -155,7 +155,12 @@ class FIMService:
             end_date=None,
             relaxed_for_print=False,
         )
-
+        if out_dir:
+            inputs_root = Path(out_dir)
+        else:
+            inputs_root = Path(os.getcwd()) / "FIMevaluation_inputs"
+            inputs_root.mkdir(parents=True, exist_ok=True)
+            
         self._ensure_roots()
 
         # If strict match missing but filename given → fallback to filename-based lookup
@@ -189,10 +194,6 @@ class FIMService:
                         "folders": [],
                         "matches": [],
                     }
-
-                root = Path(out_dir or os.getcwd())
-                inputs_root = root / "FIM_evaluation" / "FIM_inputs"
-                inputs_root.mkdir(parents=True, exist_ok=True)
 
                 # IMPORTANT: if user provided date_input, force folder label from user date
                 site = self._site_of(rec)
@@ -241,11 +242,6 @@ class FIMService:
                 f" and '{date_input}'" if date_input else ""
             )
             return {"status": "not_found", "message": msg, "folders": [], "matches": []}
-
-        # Normal strict match path
-        root = Path(out_dir or os.getcwd())
-        inputs_root = root / "FIM_evaluation" / "FIM_inputs"
-        inputs_root.mkdir(parents=True, exist_ok=True)
 
         total_downloaded = 0
         ensured = False
