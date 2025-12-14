@@ -1,6 +1,5 @@
 [project]
 name = "fimserve"
-version = "0.1.88"
 version = "0.1.89"
 description = "Framework which is developed with the purpose of quickly generating Flood Inundation Maps (FIM) for emergency response and risk assessment. It is developed under Surface Dynamics Modeling Lab (SDML)."
 authors = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
