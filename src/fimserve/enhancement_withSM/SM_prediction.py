@@ -1,7 +1,7 @@
-from SM_preprocess import *
-from surrogate_model import *
-from utlis import *
-from preprocessFIM import *
+from .SM_preprocess import *
+from .surrogate_model import *
+from .utlis import *
+from .preprocessFIM import *
 
 def load_model(model):
     # Set up S3 access
@@ -122,7 +122,7 @@ def save_image(image: torch.Tensor, path: Path, reference_tif: str):
         
         
 #ENHANCE THE LOW-FIDELITY FLOOD MAP
-def Predict_FM(huc_id, patch_size=(256, 256)):
+def enhanceFIM(huc_id, patch_size=(256, 256)):
     
     data_dir = Path(f'./HUC{huc_id}_forcings/')
     model =  AttentionUNet(channel=8)

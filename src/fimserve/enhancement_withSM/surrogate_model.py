@@ -1,18 +1,9 @@
 #Import the libraries and packages
-import csv
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import pytorch_lightning as pl
-from pathlib import Path
-from PIL import Image
-import pandas as pd
 import torchmetrics
-from torchmetrics import Metric
-from pytorch_lightning.tuner import Tuner
-from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Callback
-import torch.nn.functional as F
 
 #IOU loss
 class IoULoss(nn.Module):

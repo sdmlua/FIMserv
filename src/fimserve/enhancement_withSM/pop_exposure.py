@@ -4,7 +4,6 @@ from rasterio.mask import mask
 from shapely.geometry import mapping
 import geopandas as gpd
 import numpy as np
-from rasterio.transform import xy
 from rasterio.warp import reproject
 from pathlib import Path
 from matplotlib.patches import Patch
@@ -13,7 +12,7 @@ import matplotlib.font_manager as fm
 from matplotlib.colors import ListedColormap, BoundaryNorm
 import matplotlib.pyplot as plt
 
-from interactS3 import getHUC8BoundaryByID, get_population_GRID
+from .interactS3 import getHUC8BoundaryByID, get_population_GRID
 
 def calculate_GRIDnSCALEbar(extent, boundary_gdf_4326): 
     avg_lat = (extent[2] + extent[3]) / 2

@@ -36,9 +36,16 @@ This framework is designed to:
 - Inform public warnings and evacuation strategies
 - Aid in post-event damage assessments and recovery planning
 
+## Usage
+The integration of Surrogate Modeling (SM) framework with FIMserv can be run throgu Google Colab- as there GPU resources is available. 
+
+SM enhancement usage Open In Colab: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1KD5tBJQD-q2K3xpylfqL_1OHtQrUi4GA)
+
 ## Reference
 The trained Surrogate Model that is being applied for the enhancement of the FIMserv derieved Low-Fidelity results comes out of the following research, which is currently in review. 
 
-**Preprint** — **Supath Dhital**, Sagy Cohen, Parvaneh Nikrou, et al.  
+**Preprint** :
+
+**Supath Dhital**, Sagy Cohen, Parvaneh Nikrou, et al.  
 Enhancement of low-fidelity flood inundation mapping through surrogate modeling. *ESS Open Archive*, November 03, 2025.  
 [https://doi.org/10.22541/essoar.176218121.12875584/v1](https://doi.org/10.22541/essoar.176218121.12875584/v1)

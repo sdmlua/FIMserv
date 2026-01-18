@@ -1,6 +1,5 @@
 import os
 import rasterio
-import geopandas as gpd
 import fiona
 from typing import Union
 from rasterio.crs import CRS
@@ -10,8 +9,8 @@ from pathlib import Path
 from rasterio.mask import mask
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 
-from utlis import *
-from interactS3 import *
+from .utlis import *
+from .interactS3 import *
 
 #Import the Streamflow data Download and FIM running module
 from ..datadownload import DownloadHUC8
