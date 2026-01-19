@@ -17,6 +17,7 @@ from rasterio.mask import mask
 from rasterio.warp import calculate_default_transform, reproject, Resampling, transform_geom
 from rasterio.features import bounds as geom_bounds
 import warnings
+import logging
 
 from .utlis import *
 from .interactS3 import *
@@ -26,6 +27,10 @@ from ..datadownload import DownloadHUC8
 from ..streamflowdata.nwmretrospective import getNWMretrospectivedata
 from ..streamflowdata.forecasteddata import getNWMForecasteddata
 from ..runFIM import runOWPHANDFIM
+
+logging.getLogger("rasterio").setLevel(logging.ERROR)
+logging.getLogger("rasterio._env").setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 #GET LOW FIDELITY USING FIMSERVE
@@ -347,7 +352,7 @@ def clip_raster_inplace_to_boundary(
       persists outside the boundary (no "black dots"/artifacts outside the clip).
     """
     raster_path = Path(raster_path)
-    clipped_path = raster_path.with_name(f"{raster_path.stem}_Clipped{raster_path.suffix}")
+    clipped_path = raster_path.with_name(f"{raster_path.stem}_clipped{raster_path.suffix}")
 
     geoms, b_crs = _ensure_list_of_geoms_and_crs(boundary_geometry, boundary_crs=boundary_crs)
     if not geoms:
@@ -377,9 +382,6 @@ def clip_raster_inplace_to_boundary(
             all_touched=False
         )
 
-        # Extra safety: ensure masked-out pixels are exactly nodata_value across all bands
-        if src.count == 1:
-            out_image = np.where(out_image == out_image, out_image, nodata_value)  # no-op for safety
         # mask() already filled; the key is to force dtype + nodata consistency
         if out_image.dtype != src.dtypes[0]:
             out_image = out_image.astype(src.dtypes[0], copy=False)
@@ -436,7 +438,8 @@ def clip_all_forcings_if_boundary_overlaps(
       empty dict if clipping was skipped due to non-overlap.
     """
     forcing_dir = Path(forcing_dir)
-    tifs = sorted(forcing_dir.glob("*.tif"))
+    all_tifs = sorted(forcing_dir.glob("*.tif"))
+    tifs = [p for p in all_tifs if not p.stem.endswith("_clipped")]
 
     if not tifs:
         raise FileNotFoundError(f"No .tif forcing rasters found in: {forcing_dir}")
@@ -454,12 +457,12 @@ def clip_all_forcings_if_boundary_overlaps(
                 non_overlapping.append(tif)
                 continue
 
-            # Transform boundary geometries into this forcing CRS before overlap check
             if b_crs is None:
-                b_crs_local = src.crs
+                b_crs_local = CRS.from_user_input(boundary_crs)
             else:
                 b_crs_local = b_crs
 
+            # Transform boundary geometries into this forcing CRS before overlap check
             if src.crs != b_crs_local:
                 geoms_in_src = [transform_geom(b_crs_local, src.crs, g, precision=6) for g in geoms]
             else:
@@ -495,6 +498,66 @@ def clip_all_forcings_if_boundary_overlaps(
 
     return mapping
 
+
+def clip_fim_to_boundary(
+    fim_raster_path: Path,
+    boundary_geometry,
+    boundary_crs: Union[str, dict] = "EPSG:4326",
+    nodata_value: int = 0
+) -> Path:
+    fim_raster_path = Path(fim_raster_path)
+    clipped_path = fim_raster_path.with_name(f"{fim_raster_path.stem}_clipped{fim_raster_path.suffix}")
+
+    geoms, b_crs = _ensure_list_of_geoms_and_crs(boundary_geometry, boundary_crs=boundary_crs)
+    if not geoms:
+        raise ValueError("boundary_geometry is empty; cannot clip.")
+
+    with rasterio.open(fim_raster_path) as src:
+        src_crs = src.crs
+        if src_crs is None:
+            raise ValueError(f"Raster has no CRS: {fim_raster_path}")
+
+        if b_crs is None:
+            b_crs = src_crs
+
+        if src_crs != b_crs:
+            geoms_in_src = [transform_geom(b_crs, src_crs, g, precision=6) for g in geoms]
+        else:
+            geoms_in_src = geoms
+
+        out_image, out_transform = mask(
+            src,
+            geoms_in_src,
+            crop=True,
+            filled=True,
+            nodata=nodata_value,
+            all_touched=False
+        )
+
+        if out_image.dtype != src.dtypes[0]:
+            out_image = out_image.astype(src.dtypes[0], copy=False)
+
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": out_image.shape[1],
+            "width": out_image.shape[2],
+            "transform": out_transform,
+            "crs": src_crs,
+            "nodata": nodata_value,
+        })
+
+    with rasterio.open(clipped_path, "w", **out_meta) as dst:
+        dst.write(out_image)
+
+    try:
+        compress_tif_lzw(clipped_path)
+    except Exception:
+        pass
+
+    return clipped_path
+
+
 # PREPROCESS THE OWP HAND BASED FIM FOR SM
 def prepare_FORCINGs(
     huc_id,
@@ -514,8 +577,9 @@ def prepare_FORCINGs(
 
     # If here, some boundary is passed, If that boundary overlaps with all the forcings,
     forcing_dir = Path(f'./HUC{huc_id}_forcings')
-    forcing_suffix = ""  
 
+    mapping = {}
+    did_clip_forcings = False
     if clip_boundary is not None:
         print("Boundary provided. Checking overlap with all forcings...\n")
         mapping = clip_all_forcings_if_boundary_overlaps(
@@ -524,7 +588,7 @@ def prepare_FORCINGs(
             boundary_crs=clip_boundary_crs
         )
         if mapping:
-            forcing_suffix = "_clipped"
+            did_clip_forcings = True
             print("All forcing rasters clipped successfully.\n")
         else:
             print("Skipping forcing clipping due to non-overlap.\n")
@@ -542,6 +606,9 @@ def prepare_FORCINGs(
 
     # Get the HUC8 boundary
     HUC_boundary = getHUC8BoundaryByID(huc_id)
+
+    lulc_original = forcing_dir / f"LULC_HUC{huc_id}.tif"
+    reference_dir = mapping.get(lulc_original, lulc_original)
 
     for FIM in fim_files:
         out_dir = fim_dir / 'processing'
@@ -562,10 +629,24 @@ def prepare_FORCINGs(
         mask_with_PWB(out_dir_binary, final_raster)
         compress_tif_lzw(final_raster)
 
+        # If boundary clipping happened for forcings, clip the FIM as well
+        final_for_alignment = final_raster
+        if did_clip_forcings and clip_boundary is not None:
+            final_for_alignment = clip_fim_to_boundary(
+                fim_raster_path=final_raster,
+                boundary_geometry=clip_boundary,
+                boundary_crs=clip_boundary_crs,
+                nodata_value=0
+            )
+
         # Align final FIM raster with reference raster
-        reference_dir = forcing_dir / f'LULC_HUC{huc_id}{forcing_suffix}.tif'
-        FIM_finaldir = forcing_dir / f'hand_{FIM.stem}.tif'
-        align_raster(final_raster, reference_dir, FIM_finaldir)
+        fim_name = FIM.stem
+        if did_clip_forcings and clip_boundary is not None:
+            FIM_finaldir = forcing_dir / f'hand_{fim_name}_clipped.tif'
+        else:
+            FIM_finaldir = forcing_dir / f'hand_{fim_name}.tif'
+
+        align_raster(final_for_alignment, reference_dir, FIM_finaldir)
 
     # Clean up temporary FIM directory
     if cwd.exists() and cwd.is_dir():
