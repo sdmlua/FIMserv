@@ -64,8 +64,17 @@ def save_image(image: torch.Tensor, path: Path, reference_tif: str):
         with rasterio.open(path, "w", **meta) as dst:
             dst.write(image_np, 1)
 
-        # Apply water body mask
-        mask_with_PWB(path, path)
+        # Apply water body mask using ExtractPWB — same as FIM preprocessing
+        import geopandas as gpd
+        from shapely.geometry import box as shapely_box
+        with rasterio.open(reference_tif) as ref:
+            b = ref.bounds
+            epsg = ref.crs.to_epsg()
+        boundary_gdf = gpd.GeoDataFrame(
+            geometry=[shapely_box(b.left, b.bottom, b.right, b.top)],
+            crs=f"EPSG:{epsg}",
+        ).to_crs("EPSG:4326")
+        mask_with_PWB(path, path, boundary_gdf)
 
         # Binarize and compress
         with rasterio.open(path, "r+") as dst:
@@ -109,7 +118,7 @@ def predict_optimized(
 
     img_channels, img_rows, img_cols = X.shape
 
-    # SETUP OUTPUT ACCUMULATORS (On CPU)
+    # SETUP OUTPUT ACCUMULATORS
     weighted_prediction_sum = torch.zeros(
         (1, img_rows, img_cols), dtype=torch.float32, device="cpu"
     )
@@ -281,7 +290,7 @@ def enhanceFIM(huc_id, patch_size=(256, 256), batch_size=32):
         if device.type == "cuda":
             torch.cuda.empty_cache()
 
-        pred_dir = Path(f"./Results/HUC{huc_id}/")
+        pred_dir = Path(f"./SM_results/HUC{huc_id}/")
         pred_dir.mkdir(parents=True, exist_ok=True)
         pred_path = pred_dir / f"SMprediction_{lf_filename}"
 

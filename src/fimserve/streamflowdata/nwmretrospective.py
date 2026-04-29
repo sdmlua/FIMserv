@@ -102,6 +102,9 @@ def getdischargeforspecifiedtime(
     finalHANDdischarge_dir = os.path.join(
         data_dir, f"NWM_{formatted_datetime}_{huc}.csv"
     )
+    if os.path.exists(finalHANDdischarge_dir):
+        print(f"Discharge CSV already exists, skipping: {finalHANDdischarge_dir}")
+        return
     discharge_data.to_csv(finalHANDdischarge_dir, index=False)
     print(f"Discharge values saved to {finalHANDdischarge_dir}")
 

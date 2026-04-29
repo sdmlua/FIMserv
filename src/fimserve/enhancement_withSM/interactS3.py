@@ -82,6 +82,9 @@ def get_forcings(huc_id, downloadforcings=True):
         for s3_path in s3_files:
             relative_path = Path(s3_path.replace(f"{bucket_name}/{s3_prefix}", ""))
             local_path = local_folder / relative_path
+            if local_path.exists():
+                print(f"Forcing already exists, skipping: {local_path.name}")
+                continue
             local_path.parent.mkdir(parents=True, exist_ok=True)
             fs.get(s3_path, str(local_path))
     else:

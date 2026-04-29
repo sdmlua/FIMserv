@@ -135,6 +135,12 @@ def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
 def runOWPHANDFIM(huc, depth=False, version=None):
     code_dir, data_dir, output_dir = setup_directories()
 
+    inundation_dir = os.path.join(output_dir, f"flood_{huc}", f"{huc}_inundation")
     discharge = glob.glob(os.path.join(data_dir, f"*{huc}*.csv"))
     for file in discharge:
+        discharge_basename = os.path.basename(file).split(".")[0]
+        fim_file = os.path.join(inundation_dir, f"{discharge_basename}_inundation.tif")
+        if os.path.exists(fim_file):
+            print(f"FIM already exists for {discharge_basename}, skipping.")
+            continue
         runfim(code_dir, output_dir, huc, file, depth=depth)

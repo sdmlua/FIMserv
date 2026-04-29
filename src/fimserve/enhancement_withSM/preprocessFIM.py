@@ -1,11 +1,12 @@
 """
 Author: Supath Dhital
-Date: Jan, 2026
+Date updated: Apr, 2026
 
 This module contains functions to preprocess the FIM outputs and othe forcings for Surrogate Model based enhancement.
 """
 
 import os
+import pandas as pd
 import rasterio
 import fiona
 from typing import Union, List, Dict, Any
@@ -26,9 +27,10 @@ import logging
 
 from .utlis import *
 from .interactS3 import *
+from fimeval.ContingencyMap.water_bodies import ExtractPWB
 
 # Import the Streamflow data Download and FIM running module
-from ..datadownload import DownloadHUC8
+from ..datadownload import DownloadHUC8, setup_directories
 from ..streamflowdata.nwmretrospective import getNWMretrospectivedata
 from ..streamflowdata.forecasteddata import getNWMForecasteddata
 from ..runFIM import runOWPHANDFIM
@@ -47,48 +49,42 @@ def get_LFFIM(
     forecast_date=None,
     sort_by=None,
 ):
-    original_cwd = os.getcwd()
-    try:
-        createCWD("fim")
-        DownloadHUC8(huc_id)
+    DownloadHUC8(huc_id)
 
-        # For retrospective event
-        if data == "retrospective":
-            if not event_date:
-                raise ValueError("event_date is required for retrospective analysis.")
-            huc_event_dict = initialize_huc_event(huc_id, event_date)
-            getNWMretrospectivedata(huc_event_dict=huc_event_dict)
+    # For retrospective event
+    if data == "retrospective":
+        if not event_date:
+            raise ValueError("event_date is required for retrospective analysis.")
+        huc_event_dict = initialize_huc_event(huc_id, event_date)
+        getNWMretrospectivedata(huc_event_dict=huc_event_dict)
 
-        # For forecasting event
-        elif data == "forecast":
-            if not forecast_range:
-                raise ValueError(
-                    "forecast_range ('short_range', 'medium_range', or 'long_range') is required for forecast."
-                )
+    # For forecasting event
+    elif data == "forecast":
+        if not forecast_range:
+            raise ValueError(
+                "forecast_range ('short_range', 'medium_range', or 'long_range') is required for forecast."
+            )
 
-            if forecast_range in ["medium_range", "long_range"]:
-                if not sort_by:
-                    sort_by = "maximum"
-                getNWMForecasteddata(
-                    huc_id=huc_id,
-                    forecast_range=forecast_range,
-                    forecast_date=forecast_date,
-                    sort_by=sort_by,
-                )
-            else:
-                getNWMForecasteddata(
-                    huc_id=huc_id,
-                    forecast_range=forecast_range,
-                    forecast_date=forecast_date,
-                )
+        if forecast_range in ["medium_range", "long_range"]:
+            if not sort_by:
+                sort_by = "maximum"
+            getNWMForecasteddata(
+                huc_id=huc_id,
+                forecast_range=forecast_range,
+                forecast_date=forecast_date,
+                sort_by=sort_by,
+            )
         else:
-            raise ValueError("data_type must be either 'retrospective' or 'forecast'.")
+            getNWMForecasteddata(
+                huc_id=huc_id,
+                forecast_range=forecast_range,
+                forecast_date=forecast_date,
+            )
+    else:
+        raise ValueError("data_type must be either 'retrospective' or 'forecast'.")
 
-        # Run the FIM
-        runOWPHANDFIM(huc_id)
-
-    finally:
-        os.chdir(original_cwd)
+    # Run the FIM
+    runOWPHANDFIM(huc_id)
 
 
 def load_shapes(shapefile_path):
@@ -196,10 +192,13 @@ def raster2binary(input_raster_path, geometry, final_raster_path):
 
 # Masking with PWB and save the final raster
 def mask_with_PWB(
-    input_raster_path, output_raster_path, input_depth=None, output_depth=None
+    input_raster_path, output_raster_path, boundary, input_depth=None, output_depth=None
 ):
-    PWB_shp = PWB_inS3(fs, bucket_name)
-    shapes = load_shapes(PWB_shp)
+    import geopandas as gpd
+    if not isinstance(boundary, gpd.GeoDataFrame):
+        boundary = gpd.GeoDataFrame(geometry=boundary, crs="EPSG:4326")
+    pwb = ExtractPWB(boundary=boundary, save=False, output_filename="permanent_water.gpkg")
+    shapes = [geom.__geo_interface__ for geom in pwb.gdf.geometry if geom is not None]
 
     with rasterio.open(input_raster_path) as src:
         out_image, out_transform = mask(src, shapes, invert=True)
@@ -297,7 +296,6 @@ def _load_boundary_geometries_from_vector(vector_path: Union[str, Path]):
     vector_path = str(vector_path)
     with fiona.open(vector_path, "r") as src:
         shapes = [feat["geometry"] for feat in src if feat and feat.get("geometry")]
-        # Fiona may provide CRS as WKT or mapping. Handle robustly.
         fiona_crs = src.crs_wkt or src.crs
     crs = CRS.from_user_input(fiona_crs) if fiona_crs else None
     return shapes, crs
@@ -611,6 +609,16 @@ def clip_fim_to_boundary(
 
 
 # PREPROCESS THE OWP HAND BASED FIM FOR SM
+def _real_inundation_dir(huc_id) -> Path:
+    _, _, output_dir = setup_directories()
+    return Path(output_dir) / f"flood_{huc_id}" / f"{huc_id}_inundation"
+
+
+def _expected_fim_filename(huc_id, event_date) -> str:
+    dt = pd.to_datetime(event_date)
+    return f"NWM_{dt.strftime('%Y%m%d%H%M%S')}_{huc_id}_inundation.tif"
+
+
 def prepare_FORCINGs(
     huc_id,
     event_date=None,
@@ -627,7 +635,6 @@ def prepare_FORCINGs(
     get_forcings(huc_id)
     print("Forcings downloaded successfully.\n")
 
-    # If here, some boundary is passed, If that boundary overlaps with all the forcings,
     forcing_dir = Path(f"./HUC{huc_id}_forcings")
 
     mapping = {}
@@ -646,22 +653,76 @@ def prepare_FORCINGs(
             print("Skipping forcing clipping due to non-overlap.\n")
 
     # GET THE FIM FILES
-    print(f"Generating the FIM files for {data} event...\n")
-    get_LFFIM(
-        huc_id,
-        event_date=event_date,
-        data=data,
-        forecast_range=forecast_range,
-        forecast_date=forecast_date,
-        sort_by=sort_by,
-    )
-    print("FIM files generated successfully.\n")
+    inundation_dir = _real_inundation_dir(huc_id)
+
+    if event_date is None:
+        # No date — use whatever already exists in the output folder
+        if inundation_dir.exists():
+            fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
+            if fim_files:
+                print(
+                    f"No event_date provided. Found {len(fim_files)} existing FIM file(s) "
+                    f"in {inundation_dir} — skipping generation.\n"
+                )
+            else:
+                raise FileNotFoundError(
+                    f"No event_date provided and no FIM files found in {inundation_dir}. "
+                    "Please pass event_date to generate the FIM first."
+                )
+        else:
+            raise FileNotFoundError(
+                f"No event_date provided and FIM output directory does not exist: {inundation_dir}. "
+                "Please pass event_date to generate the FIM first."
+            )
+
+    elif data == "retrospective":
+        dates = [event_date] if isinstance(event_date, str) else list(event_date)
+
+        inundation_dir.mkdir(parents=True, exist_ok=True)
+
+        dates_to_generate = []
+        for d in dates:
+            expected_file = inundation_dir / _expected_fim_filename(huc_id, d)
+            if expected_file.exists():
+                print(f"FIM already exists for {d} — reusing {expected_file.name}\n")
+            else:
+                dates_to_generate.append(d)
+
+        if dates_to_generate:
+            print(
+                f"Generating FIM for {len(dates_to_generate)} date(s): "
+                f"{', '.join(str(d) for d in dates_to_generate)}\n"
+            )
+            get_LFFIM(
+                huc_id,
+                event_date=dates_to_generate,
+                data=data,
+                forecast_range=forecast_range,
+                forecast_date=forecast_date,
+                sort_by=sort_by,
+            )
+            print("FIM files generated successfully.\n")
+        else:
+            print("All requested FIM files already exist — skipping generation.\n")
+
+        fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
+
+    else:
+        # Forecast — unchanged behaviour
+        print(f"Generating the FIM files for {data} event...\n")
+        get_LFFIM(
+            huc_id,
+            event_date=event_date,
+            data=data,
+            forecast_range=forecast_range,
+            forecast_date=forecast_date,
+            sort_by=sort_by,
+        )
+        print("FIM files generated successfully.\n")
+        fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
 
     # PREPROCESSING THE FIM FILES
     print("Preprocessing the FIM files...\n")
-    cwd = Path("./fim")
-    fim_dir = cwd / f"output/flood_{huc_id}/{huc_id}_inundation/"
-    fim_files = sorted(fim_dir.glob("*.tif"))
 
     # Get the HUC8 boundary
     HUC_boundary = getHUC8BoundaryByID(huc_id)
@@ -669,23 +730,34 @@ def prepare_FORCINGs(
     lulc_original = forcing_dir / f"LULC_HUC{huc_id}.tif"
     reference_dir = mapping.get(lulc_original, lulc_original)
 
+    processing_dir = inundation_dir / "processing"
+
     for FIM in fim_files:
-        out_dir = fim_dir / "processing"
-        out_dir.mkdir(parents=True, exist_ok=True)
+        fim_name = FIM.stem
+        if did_clip_forcings and clip_boundary is not None:
+            FIM_finaldir = forcing_dir / f"hand_{fim_name}_clipped.tif"
+        else:
+            FIM_finaldir = forcing_dir / f"hand_{fim_name}.tif"
+
+        if FIM_finaldir.exists():
+            print(f"Preprocessed FIM already exists, skipping: {FIM_finaldir.name}\n")
+            continue
+
+        processing_dir.mkdir(parents=True, exist_ok=True)
 
         # Reproject the FIM file
-        FIM_file = out_dir / f"{FIM.stem}_reprojected.tif"
+        FIM_file = processing_dir / f"{FIM.stem}_reprojected.tif"
         reproject_raster(FIM, FIM_file)
         compress_tif_lzw(FIM_file)
 
         # Convert to binary
-        out_dir_binary = out_dir / f"{FIM.stem}_binary.tif"
+        out_dir_binary = processing_dir / f"{FIM.stem}_binary.tif"
         raster2binary(FIM_file, HUC_boundary, out_dir_binary)
         compress_tif_lzw(out_dir_binary)
 
         # Mask and clip with PWB
-        final_raster = out_dir / f"{FIM.stem}_final.tif"
-        mask_with_PWB(out_dir_binary, final_raster)
+        final_raster = processing_dir / f"{FIM.stem}_final.tif"
+        mask_with_PWB(out_dir_binary, final_raster, HUC_boundary)
         compress_tif_lzw(final_raster)
 
         # If boundary clipping happened for forcings, clip the FIM as well
@@ -699,16 +771,10 @@ def prepare_FORCINGs(
             )
 
         # Align final FIM raster with reference raster
-        fim_name = FIM.stem
-        if did_clip_forcings and clip_boundary is not None:
-            FIM_finaldir = forcing_dir / f"hand_{fim_name}_clipped.tif"
-        else:
-            FIM_finaldir = forcing_dir / f"hand_{fim_name}.tif"
-
         align_raster(final_for_alignment, reference_dir, FIM_finaldir)
 
-    # Clean up temporary FIM directory
-    if cwd.exists() and cwd.is_dir():
-        shutil.rmtree(cwd)
+    # Clean up processing temp files
+    if processing_dir.exists() and processing_dir.is_dir():
+        shutil.rmtree(processing_dir)
 
     print("FIM file preprocessed successfully.\n")

@@ -42,7 +42,7 @@ def calculate_GRIDnSCALEbar(extent, boundary_gdf_4326):
     return gridsize, scalebar_size_deg, scale_label
 
 
-def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta):
+def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id=None):
     boundary = boundary_gdf.to_crs("EPSG:4326")
     geoms = [mapping(geom) for geom in boundary.geometry]
 
@@ -196,10 +196,13 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta):
     )
 
     plt.tight_layout()
-    output_name = f"PE_{Path(flood_map).stem}.png"
-    output_path = Path(flood_map).parent / output_name
+    huc_tag = huc_id if huc_id else "unknown"
+    plots_dir = Path(f"./SM_results/HUC{huc_tag}/plots")
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    output_path = plots_dir / f"PE_{Path(flood_map).stem}.png"
     plt.savefig(output_path, dpi=600)
-    plt.show()
+    plt.pause(5)
+    plt.close()
 
 
 def getpopulation_exposure(huc_id, boundary=None):
@@ -215,7 +218,7 @@ def getpopulation_exposure(huc_id, boundary=None):
         HUC_boundary = gpd.GeoDataFrame(geometry=HUC_geojson, crs="EPSG:4326")
 
     # Load flood maps and compute building exposure
-    flood_dir = Path(f"./Results/HUC{huc_id}")
+    flood_dir = Path(f"./SM_results/HUC{huc_id}")
     flood_files = list(flood_dir.glob("*.tif"))
     data_array, meta = get_population_GRID(HUC_boundary)
 
@@ -225,5 +228,6 @@ def getpopulation_exposure(huc_id, boundary=None):
             boundary_gdf=HUC_boundary,
             flood_map=flood_map,
             pop_array=data_array[0],
+            huc_id=huc_id,
             pop_meta=meta,
         )

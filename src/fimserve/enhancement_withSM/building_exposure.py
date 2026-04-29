@@ -6,7 +6,7 @@ import rasterio
 import os
 import tempfile
 import shutil
-import msfootprint as msf
+import fimeval as fe
 from pathlib import Path
 from rasterio.mask import mask
 from matplotlib.patches import Patch
@@ -16,21 +16,7 @@ import matplotlib.font_manager as fm
 
 from .interactS3 import getHUC8BoundaryByID
 
-
-def _ensure_boundary_path(
-    boundary_gdf: gpd.GeoDataFrame,
-) -> tuple[str, tempfile.TemporaryDirectory]:
-    """
-    Writes boundary_gdf to a temporary GeoJSON and returns (path, tmpdir_handle).
-    Keep tmpdir_handle alive while downstream code runs.
-    """
-    tmpdir = tempfile.TemporaryDirectory()
-    boundary_path = Path(tmpdir.name) / "boundary.geojson"
-    boundary_gdf.to_crs("EPSG:4326").to_file(boundary_path, driver="GeoJSON")
-    return str(boundary_path), tmpdir
-
-
-def get_building_exposure(boundary, flood_map, building_gpkg):
+def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
     # Accept either path or GeoDataFrame
     if isinstance(boundary, (str, Path)):
         boundary = gpd.read_file(boundary).to_crs("EPSG:4326")
@@ -241,62 +227,42 @@ def get_building_exposure(boundary, flood_map, building_gpkg):
     plt.tight_layout()
 
     flood_basename = os.path.splitext(os.path.basename(flood_map))[0]
-    output_dir = os.path.dirname(flood_map)
-    output_filename = os.path.join(output_dir, f"BE_{flood_basename}.png")
+    huc_tag = huc_id if huc_id else "unknown"
+    plots_dir = Path(f"./SM_results/HUC{huc_tag}/plots")
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    output_filename = plots_dir / f"BE_{flood_basename}.png"
     plt.savefig(output_filename, dpi=600)
-    plt.show()
+    plt.pause(5)
+    plt.close()
 
 
-def getbuilding_exposure(huc_id, boundary=None, geeprojectID=None):
-    """
-    Wrapper:
-      - Ensures msfootprint always receives a boundary *path*.
-      - Keeps boundary as a GeoDataFrame for plotting/clip operations.
-    """
-    countryISO = "USA"
-    out_dir = Path(f"./Results/HUC{huc_id}/BuildingFootprint")
-    building_gpkg = out_dir / "building_footprint.gpkg"
+def getbuilding_exposure(huc_id, boundary=None):
+    # Update the filename to match the new class default
+    out_dir = Path(f"./SM_results/HUC{huc_id}/BuildingFootprint")
+    building_gpkg = out_dir / "building_footprints.gpkg" 
 
-    tmpdir = None
-    boundary_path = None
-
-    # Normalize boundary to GeoDataFrame & boundary_path
+    # Normalize boundary to GeoDataFrame 
     if boundary is not None:
         if isinstance(boundary, (str, Path)):
-            boundary_path = str(boundary)
-            HUC_boundary = gpd.read_file(boundary_path).to_crs("EPSG:4326")
+            HUC_boundary = gpd.read_file(boundary).to_crs("EPSG:4326")
         elif isinstance(boundary, gpd.GeoDataFrame):
             HUC_boundary = boundary.to_crs("EPSG:4326")
-            boundary_path, tmpdir = _ensure_boundary_path(HUC_boundary)
-        else:
-            raise ValueError(
-                "boundary must be a GeoDataFrame or path to a shapefile/geojson"
-            )
     else:
-        HUC_geojson = getHUC8BoundaryByID(huc_id)  # likely GeoSeries
+        HUC_geojson = getHUC8BoundaryByID(huc_id)
         HUC_boundary = gpd.GeoDataFrame(geometry=HUC_geojson, crs="EPSG:4326")
-        boundary_path, tmpdir = _ensure_boundary_path(HUC_boundary)
 
-    # Run msfootprint using the boundary path (not GeoDataFrame)
     try:
         if not building_gpkg.exists():
-            msf.BuildingFootprintwithISO(
-                countryISO, boundary_path, out_dir, geeprojectID
-            )
+            print(f"Downloading footprints via ArcGIS REST API...")
+            fe.getBuildingFootprint(boundary=HUC_boundary, output_dir=out_dir)
 
-        # Load flood maps and compute building exposure plots
-        flood_dir = Path(f"./Results/HUC{huc_id}")
+        # Processing loop
+        flood_dir = Path(f"./SM_results/HUC{huc_id}")
         flood_files = list(flood_dir.glob("*.tif"))
 
         for flood_map in flood_files:
-            print(f"Processing building exposure for: {flood_map}")
-            get_building_exposure(HUC_boundary, str(flood_map), str(building_gpkg))
+            get_building_exposure(HUC_boundary, str(flood_map), str(building_gpkg), huc_id=huc_id)
 
     finally:
-        # Cleanup temp boundary file
-        if tmpdir is not None:
-            tmpdir.cleanup()
-
-    # Cleanup msfootprint outputs
-    if out_dir.exists():
-        shutil.rmtree(out_dir)
+        if out_dir.exists():
+            shutil.rmtree(out_dir)

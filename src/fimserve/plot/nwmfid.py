@@ -4,6 +4,28 @@ import matplotlib.pyplot as plt
 
 from ..datadownload import setup_directories
 
+def _notebook_env() -> str:
+    try:
+        from IPython import get_ipython
+        shell = get_ipython()
+        if shell is None:
+            return "none"
+
+        if "google.colab" in str(shell.__class__.__module__):
+            return "colab"
+
+        import sys
+        if "google.colab" in sys.modules:
+            return "colab"
+
+        if type(shell).__name__ == "ZMQInteractiveShell":
+            return "notebook"
+
+        return "none"
+
+    except ImportError:
+        return "none"
+
 
 def getFIDdata(data_dir, feature_id, start_date, end_date):
     location_id = f"nwm30-{feature_id}"
@@ -28,7 +50,6 @@ def getFIDdata(data_dir, feature_id, start_date, end_date):
     df = pd.read_parquet(target_dir)
     matched_rows = df[df["location_id"] == location_id]
 
-    # Prepare the filtered data with desired columns
     filtered_data = matched_rows[["value_time", "value"]].copy()
     filtered_data.rename(
         columns={"value_time": "Date", "value": "Discharge"}, inplace=True
@@ -37,7 +58,6 @@ def getFIDdata(data_dir, feature_id, start_date, end_date):
     return filtered_data
 
 
-# For the default feature_id
 def getFeatureWithMaxDischarge(data_dir, start_date, end_date):
     start_dateSTR = pd.to_datetime(start_date).strftime("%Y%m%d")
     end_dateSTR = pd.to_datetime(end_date).strftime("%Y%m%d")
@@ -58,9 +78,11 @@ def getFeatureWithMaxDischarge(data_dir, start_date, end_date):
 
 
 def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, end_date):
+    # Always build & save the static matplotlib figure
     plt.figure(figsize=(10, 5))
     missing_ids = []
     plotted_ids = []
+    datasets = {}
 
     for feature_id in feature_ids:
         try:
@@ -68,7 +90,6 @@ def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, en
             if data.empty:
                 raise ValueError(f"No data for feature ID: {feature_id}")
 
-            # Plot data only if it exists
             plt.plot(
                 data["Date"],
                 data["Discharge"],
@@ -76,6 +97,7 @@ def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, en
                 linewidth=2,
             )
             plotted_ids.append(feature_id)
+            datasets[feature_id] = data
         except (FileNotFoundError, ValueError):
             missing_ids.append(feature_id)
 
@@ -86,25 +108,95 @@ def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, en
     plt.yticks(fontsize=12)
     plt.grid(True, which="both", linestyle="-", linewidth=0.3)
     plt.tight_layout()
-
     if plotted_ids:
         plt.legend()
-        # Save the plot
         plt_dir = os.path.join(output_dir, "Plots")
         os.makedirs(plt_dir, exist_ok=True)
-        plot_dir = os.path.join(plt_dir, "NWMStreamflow.png")
-        plt.savefig(plot_dir, dpi=500, bbox_inches="tight")
-        plt.show()
-    else:
+        plot_filename = f"NWMStreamflow_{plotted_ids[0]}.png"
+        plot_path = os.path.join(plt_dir, plot_filename)
+        
+        plt.savefig(plot_path, dpi=500, bbox_inches="tight")
+        print(f"Static plot saved to: {plot_path}")
+
+    plt.close()
+
+    # For Notebook- render an interactive Plotly figure in the cell
+    env = _notebook_env()
+
+    if plotted_ids and env != "none":
+        try:
+            import plotly.graph_objects as go
+            from IPython.display import display, HTML
+
+            fig = go.Figure()
+
+            for feature_id, data in datasets.items():
+                fig.add_trace(
+                    go.Scatter(
+                        x=data["Date"],
+                        y=data["Discharge"],
+                        mode="lines",
+                        name=f"Feature ID: {feature_id}",
+                        line=dict(width=2),
+                        hovertemplate=(
+                            "<b>Feature ID:</b> " + str(feature_id) + "<br>"
+                            "<b>Date:</b> %{x|%Y-%m-%d %H:%M}<br>"
+                            "<b>Discharge:</b> %{y:.4f} m³/s"
+                            "<extra></extra>"
+                        ),
+                    )
+                )
+
+            fig.update_layout(
+                title=dict(text="NWM Hourly Streamflow", font=dict(size=18)),
+                xaxis=dict(
+                    title="Date (Hourly)",
+                    tickangle=-45,
+                    showgrid=True,
+                    gridcolor="rgba(200,200,200,0.3)",
+                ),
+                yaxis=dict(
+                    title="Discharge (m³/s)",
+                    showgrid=True,
+                    gridcolor="rgba(200,200,200,0.3)",
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                ),
+                hovermode="x unified",
+                template="plotly_white",
+                height=500,
+            )
+
+            if env == "colab":
+                html_str = fig.to_html(
+                    full_html=False,
+                    include_plotlyjs="cdn",
+                    config={"responsive": True},
+                )
+                display(HTML(html_str))
+            else:
+                fig.show(renderer="notebook")
+
+        except ImportError:
+            pass
+
+    # Console messages
+    if not plotted_ids:
         print(
-            "\033[1m****No valid data found for any provided feature IDs. Plot not generated.****\033[0m"
+            "\033[1m****No valid data found for any provided feature IDs. "
+            "Plot not generated.****\033[0m"
         )
 
     if missing_ids:
         print(
-            f"\033[1m****Data not found for the following NWM feature IDs: {', '.join(map(str, missing_ids))}****\033[0m"
+            f"\033[1m****Data not found for the following NWM feature IDs: "
+            f"{', '.join(map(str, missing_ids))}****\033[0m"
         )
-
 
 # Main function to drive the process
 def plotNWMStreamflow(huc, start_date, end_date, feature_ids=None):
