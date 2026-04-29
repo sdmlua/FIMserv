@@ -8,12 +8,12 @@ from pathlib import Path
 import fimserve
 from fimserve.datadownload import setup_directories
 
-huc_id = "12030105"
+huc_id = "03020201"
 event_date = ["2016-01-01 00:00:00", "2016-01-01 06:00:00"]
 
 
 # # This sample boundary is solely for testing purposes within the HUC8- 12030105
-test_boundary = "path/to/clippingboundary.gpkg"  # Path to the clipping boundary within the HUC8 for the FIM enhancement for small area
+test_boundary = "/Users/Supath/Downloads/SDML/FIMservnEval/clip_boundary/subset_huc03020201.gpkg"  # Path to the clipping boundary within the HUC8 for the FIM enhancement for small area
 
 
 def test_prepare_forcing():

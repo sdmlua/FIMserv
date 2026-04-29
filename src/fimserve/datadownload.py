@@ -51,11 +51,13 @@ def download_data(huc_number, base_dir, version=None):
     output_dir = os.path.join(base_dir, f"flood_{huc_number}", str(huc_number))
     os.makedirs(output_dir, exist_ok=True)
 
-    # Determine S3 path based on version
+    # Determine S3 path based on version — default to 4.9
     if version == "4.5":
         s3_path = f"s3://ciroh-owp-hand-fim/hand_fim_4_5_2_11/{huc_number}/"
-    else:
+    elif version == "4.8":
         s3_path = f"s3://ciroh-owp-hand-fim/hand_fim_4_8_7_2/{huc_number}/"
+    else:
+        s3_path = f"s3://ciroh-owp-hand-fim/hand_fim_4_9_9_0/{huc_number}/"
 
     # Run the AWS CLI command with no-sign-request
     cmd = f"aws s3 sync {s3_path} {output_dir} --no-sign-request"

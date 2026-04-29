@@ -278,11 +278,26 @@ def align_raster(
 
 
 # Clip forcings by a boundary is user is providing the boundary that falls within preparing HUC8
+def _normalize_bbox(b) -> tuple:
+    """
+    Return (minx, miny, maxx, maxy) regardless of whether the raster has a
+    flipped geotransform (negative-north / bottom > top).
+    """
+    minx, miny, maxx, maxy = b
+    if minx > maxx:
+        minx, maxx = maxx, minx
+    if miny > maxy:
+        miny, maxy = maxy, miny
+    return (minx, miny, maxx, maxy)
+
+
 def _bbox_overlaps(b1, b2) -> bool:
     """
-    Basic bbox overlap test:
-      b = (minx, miny, maxx, maxy)
+    Overlap test for (minx, miny, maxx, maxy) bboxes.
+    Normalizes both inputs first so flipped raster bounds never cause false negatives.
     """
+    b1 = _normalize_bbox(b1)
+    b2 = _normalize_bbox(b2)
     return not (b1[2] <= b2[0] or b1[0] >= b2[2] or b1[3] <= b2[1] or b1[1] >= b2[3])
 
 
@@ -291,13 +306,14 @@ def _load_boundary_geometries_from_vector(vector_path: Union[str, Path]):
     Read geometries and CRS from a vector file (gpkg/shp/geojson).
     Returns:
       shapes: list of geometry dicts
-      crs: CRS (rasterio CRS) or None
+      crs: rasterio CRS or None
     """
-    vector_path = str(vector_path)
-    with fiona.open(vector_path, "r") as src:
-        shapes = [feat["geometry"] for feat in src if feat and feat.get("geometry")]
-        fiona_crs = src.crs_wkt or src.crs
-    crs = CRS.from_user_input(fiona_crs) if fiona_crs else None
+    import geopandas as gpd
+    gdf = gpd.read_file(str(vector_path))
+    if gdf.crs is None:
+        return [f.__geo_interface__ for f in gdf.geometry if f is not None], None
+    crs = CRS.from_user_input(gdf.crs.to_wkt())
+    shapes = [f.__geo_interface__ for f in gdf.geometry if f is not None]
     return shapes, crs
 
 
@@ -310,40 +326,47 @@ def _ensure_list_of_geoms_and_crs(
       crs:   rasterio CRS describing those geometries
 
     Supports:
-    - geometry dict
-    - list/tuple of geometry dicts
-    - vector path string (.gpkg/.shp/.geojson/.json)
+    - file path string/Path (.gpkg/.shp/.geojson/.json) — CRS read from file
+    - GeoDataFrame — CRS read from GeoDataFrame
+    - geometry dict or list of geometry dicts — uses boundary_crs
     """
+    import geopandas as gpd
+
     if boundary_geometry is None:
         return [], None
 
-    # If user passed a path, load shapes + CRS from file
+    # File path — read via geopandas to reliably get CRS
     if isinstance(boundary_geometry, (str, Path)):
         p = Path(boundary_geometry)
-        if p.exists() and p.is_file():
-            geoms, crs_from_file = _load_boundary_geometries_from_vector(p)
-            if not geoms:
-                raise ValueError(f"No geometries found in boundary file: {p}")
-            # If file has no CRS, fall back to provided boundary_crs
-            crs = (
-                crs_from_file
-                if crs_from_file is not None
-                else CRS.from_user_input(boundary_crs)
-            )
-            return geoms, crs
+        if not p.exists() or not p.is_file():
+            raise ValueError(f"clip_boundary path does not exist: {boundary_geometry}")
+        geoms, crs = _load_boundary_geometries_from_vector(p)
+        if not geoms:
+            raise ValueError(f"No geometries found in boundary file: {p}")
+        if crs is None:
+            print(f"Warning: boundary file has no CRS, assuming {boundary_crs}")
+            crs = CRS.from_user_input(boundary_crs)
+        return geoms, crs
 
-        # If it is a string but not a file, treat as invalid
-        raise ValueError(
-            f"clip_boundary was a string but not a valid file path: {boundary_geometry}"
-        )
+    # GeoDataFrame — extract geometries and CRS directly
+    if isinstance(boundary_geometry, gpd.GeoDataFrame):
+        if boundary_geometry.crs is None:
+            print(f"Warning: boundary GeoDataFrame has no CRS, assuming {boundary_crs}")
+            crs = CRS.from_user_input(boundary_crs)
+        else:
+            crs = CRS.from_user_input(boundary_geometry.crs.to_wkt())
+        geoms = [f.__geo_interface__ for f in boundary_geometry.geometry if f is not None]
+        if not geoms:
+            raise ValueError("boundary GeoDataFrame has no valid geometries.")
+        return geoms, crs
 
-    # If user passed list of shapes
+    # List/tuple of geometry dicts
     if isinstance(boundary_geometry, (list, tuple)):
         if len(boundary_geometry) == 0:
             return [], CRS.from_user_input(boundary_crs)
         return list(boundary_geometry), CRS.from_user_input(boundary_crs)
 
-    # Otherwise assume single geometry dict
+    # Single geometry dict
     return [boundary_geometry], CRS.from_user_input(boundary_crs)
 
 
@@ -454,8 +477,6 @@ def clip_all_forcings_if_boundary_overlaps(
     forcing_dir: Path, boundary_geometry, boundary_crs: Union[str, dict] = "EPSG:4326"
 ) -> Dict[Path, Path]:
     """
-    Updated behavior (per request):
-    - For each forcing raster, read its CRS and transform the boundary to that CRS for overlap check.
     - If ANY forcing does not overlap the boundary:
         * raise a WARNING (not an exception),
         * DO NOT CLIP ANYTHING,
@@ -472,9 +493,20 @@ def clip_all_forcings_if_boundary_overlaps(
     """
     forcing_dir = Path(forcing_dir)
     all_tifs = sorted(forcing_dir.glob("*.tif"))
-    tifs = [p for p in all_tifs if not p.stem.endswith("_clipped")]
+    originals = [p for p in all_tifs if not p.stem.endswith("_clipped")]
+    clipped_only = [p for p in all_tifs if p.stem.endswith("_clipped")]
 
-    if not tifs:
+    # Already clipped from a prior run — originals were deleted, only _clipped files remain
+    if not originals and clipped_only:
+        print("Forcing rasters already clipped from a prior run — reusing existing clipped files.\n")
+        mapping = {}
+        for p in clipped_only:
+            # Reconstruct the original key name (without _clipped suffix)
+            orig_name = p.stem[: -len("_clipped")] + p.suffix
+            mapping[forcing_dir / orig_name] = p
+        return mapping
+
+    if not originals:
         raise FileNotFoundError(f"No .tif forcing rasters found in: {forcing_dir}")
 
     geoms, b_crs = _ensure_list_of_geoms_and_crs(
@@ -486,18 +518,15 @@ def clip_all_forcings_if_boundary_overlaps(
     # Check bbox overlap for ALL rasters first
     non_overlapping = []
 
-    for tif in tifs:
+    for tif in originals:
         with rasterio.open(tif) as src:
             if src.crs is None:
                 non_overlapping.append(tif)
                 continue
 
-            if b_crs is None:
-                b_crs_local = CRS.from_user_input(boundary_crs)
-            else:
-                b_crs_local = b_crs
+            b_crs_local = b_crs if b_crs is not None else CRS.from_user_input(boundary_crs)
 
-            # Transform boundary geometries into this forcing CRS before overlap check
+            # Transform boundary into raster CRS before overlap check
             if src.crs != b_crs_local:
                 geoms_in_src = [
                     transform_geom(b_crs_local, src.crs, g, precision=6) for g in geoms
@@ -506,30 +535,25 @@ def clip_all_forcings_if_boundary_overlaps(
                 geoms_in_src = geoms
 
             boundary_bbox = _union_bounds(geoms_in_src)
-            raster_bbox = (
-                src.bounds.left,
-                src.bounds.bottom,
-                src.bounds.right,
-                src.bounds.top,
+            raster_bbox = _normalize_bbox(
+                (src.bounds.left, src.bounds.bottom, src.bounds.right, src.bounds.top)
             )
 
             if not _bbox_overlaps(boundary_bbox, raster_bbox):
                 non_overlapping.append(tif)
 
-    # If any do not overlap, warn and skip clipping entirely
+    # If any do not overlap, print message and skip clipping entirely
     if non_overlapping:
-        missing = "\n".join([f" - {p.name}" for p in non_overlapping])
-        warnings.warn(
-            "Boundary does not overlap with all forcing rasters. "
-            "Skipping forcing clipping and keeping original forcing rasters.\n"
-            f"Non-overlapping rasters:\n{missing}",
-            category=UserWarning,
+        missing = "\n".join([f"  - {p.name}" for p in non_overlapping])
+        print(
+            f"clip_boundary does not overlap with the following forcing raster(s) — "
+            f"skipping all clipping and using original forcings:\n{missing}\n"
         )
         return {}
 
     # Clip all rasters
     mapping = {}
-    for tif in tifs:
+    for tif in originals:
         new_path = clip_raster_inplace_to_boundary(
             raster_path=tif,
             boundary_geometry=boundary_geometry,
@@ -572,6 +596,17 @@ def clip_fim_to_boundary(
             ]
         else:
             geoms_in_src = geoms
+
+        boundary_bbox = _union_bounds(geoms_in_src)
+        raster_bbox = _normalize_bbox(
+            (src.bounds.left, src.bounds.bottom, src.bounds.right, src.bounds.top)
+        )
+        if not _bbox_overlaps(boundary_bbox, raster_bbox):
+            print(
+                f"clip_boundary does not overlap with FIM raster {fim_raster_path.name} — "
+                f"skipping FIM clipping and using original.\n"
+            )
+            return fim_raster_path
 
         out_image, out_transform = mask(
             src,
