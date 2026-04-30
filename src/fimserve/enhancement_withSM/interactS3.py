@@ -92,30 +92,36 @@ def get_forcings(huc_id, downloadforcings=True):
 
 
 def get_population_GRID(
-    boundary_gdf, fs=fs, bucket=bucket_name, prefix="SM_dataset/gridded_population/"
+    boundary_gdf=None, huc_id=None, fs=fs, bucket=bucket_name, prefix="SM_dataset/gridded_population/"
 ):
     files = fs.ls(f"{bucket}/{prefix}")
-    tif_key = next((f for f in files if f.endswith(".tif")), None)
+
+    tif_key = None
+    if huc_id is not None:
+        huc_specific = f"{bucket}/{prefix}HUC{huc_id}_populationGRID.tif"
+        if huc_specific in files:
+            tif_key = huc_specific
+            print(f"Using HUC-specific population raster: HUC{huc_id}_populationGRID.tif")
 
     if tif_key is None:
-        raise FileNotFoundError(f"No .tif file found in s3://{bucket}/{prefix}")
+        tif_key = next((f for f in files if f.endswith(".tif")), None)
+        if tif_key is None:
+            raise FileNotFoundError(f"No .tif file found in s3://{bucket}/{prefix}")
+        print(f"Using global population raster: {tif_key.split('/')[-1]}")
 
     with fs.open(tif_key, "rb") as s3file:
         with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
             tmp_file.write(s3file.read())
             tmp_tif_path = tmp_file.name
 
-    # Clip gridded population raster with geometry
     with rasterio.open(tmp_tif_path) as src:
-        geoms = [geom.__geo_interface__ for geom in boundary_gdf.geometry]
-        out_image, out_transform = mask(src, geoms, crop=True)
-        out_meta = src.meta.copy()
+        if boundary_gdf is not None:
+            geoms = [geom.__geo_interface__ for geom in boundary_gdf.geometry]
+            out_image, out_transform = mask(src, geoms, crop=True)
+            out_meta = src.meta.copy()
+            out_meta.update({"height": out_image.shape[1], "width": out_image.shape[2], "transform": out_transform})
+        else:
+            out_image = src.read()
+            out_meta = src.meta.copy()
 
-    out_meta.update(
-        {
-            "height": out_image.shape[1],
-            "width": out_image.shape[2],
-            "transform": out_transform,
-        }
-    )
     return out_image, out_meta

@@ -1,23 +1,19 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
-from shapely.geometry import mapping
+from shapely.geometry import mapping, box
 import rasterio
 import os
-import tempfile
 import shutil
 import fimeval as fe
 from pathlib import Path
 from rasterio.mask import mask
-from matplotlib.patches import Patch
-from matplotlib.colors import ListedColormap, BoundaryNorm
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-import matplotlib.font_manager as fm
 
 from .interactS3 import getHUC8BoundaryByID
+from .pop_exposure import _adaptive_hexbin_gridsize, _scalebar_for_extent, _discrete_norm_and_cmap, _add_map_furniture, FLOOD_COLOR, _FLOOD_RGB
+
 
 def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
-    # Accept either path or GeoDataFrame
     if isinstance(boundary, (str, Path)):
         boundary = gpd.read_file(boundary).to_crs("EPSG:4326")
     else:
@@ -25,19 +21,16 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
 
     geoms = [mapping(geom) for geom in boundary.geometry]
 
-    # Load and clip buildings
     buildings = gpd.read_file(building_gpkg).to_crs("EPSG:4326")
     buildings_clipped = gpd.clip(buildings, boundary)
     buildings_clipped = buildings_clipped[
         ~buildings_clipped.geometry.is_empty & buildings_clipped.geometry.is_valid
     ]
 
-    # Compute centroids of buildings
     centroids = buildings_clipped.centroid
     centroids_gdf = gpd.GeoDataFrame(geometry=centroids, crs=buildings_clipped.crs)
     centroids_gdf = gpd.sjoin(centroids_gdf, boundary, predicate="within", how="inner")
 
-    # Open and mask flood raster
     with rasterio.open(flood_map) as flood_src:
         flood_data_clipped, flood_transform = mask(flood_src, geoms, crop=True)
         flood_crs = flood_src.crs
@@ -46,10 +39,8 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
         )
         flood_data = flood_data_clipped[0]
 
-        # Reproject centroids to match raster CRS
         centroids_raster_crs = centroids_gdf.to_crs(flood_crs)
         coords = [(pt.x, pt.y) for pt in centroids_raster_crs.geometry]
-
         flood_values = np.array([val[0] for val in flood_src.sample(coords)])
         flooded_mask = flood_values > 0
         flooded_centroids = centroids_raster_crs[flooded_mask]
@@ -57,7 +48,6 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
     flooded_count = len(flooded_centroids)
     print(f"Total flooded buildings: \n------\n {flooded_count}")
 
-    # Ensure geometry validity
     flooded_centroids = flooded_centroids[
         flooded_centroids.geometry.notnull()
         & flooded_centroids.geometry.is_valid
@@ -70,178 +60,69 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
 
     xs = flooded_centroids.geometry.x.values.astype(float)
     ys = flooded_centroids.geometry.y.values.astype(float)
+    values = np.ones_like(xs)
 
     extent = [flood_bounds[0], flood_bounds[2], flood_bounds[1], flood_bounds[3]]
 
-    # Dynamically calculate hexbin gridsize
-    target_hex_width_m = 800
-    avg_lat = (extent[2] + extent[3]) / 2
-    meters_per_degree_lon = 111320 * np.cos(np.radians(avg_lat))
-    map_width_deg = extent[1] - extent[0]
-    map_width_m = map_width_deg * meters_per_degree_lon
-    gridsize = max(5, int(map_width_m / target_hex_width_m))
-    values = np.ones_like(xs)
+    # Clip boundary to flood extent for scalebar
+    flood_box = gpd.GeoDataFrame(geometry=[box(*flood_bounds)], crs="EPSG:4326")
+    boundary_clipped = gpd.clip(boundary, flood_box)
+    if boundary_clipped.empty:
+        boundary_clipped = boundary
+    scalebar_size_deg, scale_label = _scalebar_for_extent(boundary_clipped)
 
-    # Precompute counts for binning
+    nx, ny = _adaptive_hexbin_gridsize(extent)
+
+    # Probe hex counts for discrete colour normalisation
     fig_temp, ax_temp = plt.subplots()
-    temp_hb = ax_temp.hexbin(
-        xs, ys, C=values, reduce_C_function=np.sum, gridsize=gridsize
-    )
+    temp_hb = ax_temp.hexbin(xs, ys, C=values, reduce_C_function=np.sum,
+                              gridsize=(nx, ny), extent=extent)
     hex_counts = temp_hb.get_array()
-    min_value = int(np.min(hex_counts))
-    max_value = int(np.max(hex_counts))
     plt.close(fig_temp)
 
-    num_bins = 5
-    if min_value == max_value:
-        max_value = min_value + 1
-    bounds = np.linspace(min_value, max_value, num_bins + 1).astype(int)
+    norm, cmap, cb_bounds, cb_tick_labels = _discrete_norm_and_cmap(hex_counts)
 
-    base_colors = ["#00FF00", "#CCFF00", "#FFCC00", "#FF6600", "#CC0000"]
-    cmap = ListedColormap(base_colors)
-    norm = BoundaryNorm(bounds, cmap.N)
-
-    # Flood raster overlay (blue)
+    flood_mask_2d = (flood_data > 0).astype(float)
     flood_plot = np.zeros((*flood_data.shape, 4))
-    flood_plot[..., 2] = 1.0
-    flood_plot[..., 3] = (flood_data > 0).astype(float)
+    flood_plot[..., 0] = _FLOOD_RGB[0]
+    flood_plot[..., 1] = _FLOOD_RGB[1]
+    flood_plot[..., 2] = _FLOOD_RGB[2]
+    flood_plot[..., 3] = flood_mask_2d * 0.65
 
-    plt.figure(figsize=(8, 6))
-    plt.imshow(flood_plot, extent=extent, origin="upper")
-
-    hb = plt.hexbin(
-        xs,
-        ys,
-        C=values,
-        reduce_C_function=np.sum,
-        gridsize=gridsize,
-        cmap=cmap,
-        norm=norm,
-        mincnt=1,
-        linewidths=0.1,
-        edgecolors="black",
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.imshow(flood_plot, extent=extent, origin="upper", zorder=1)
+    hb = ax.hexbin(
+        xs, ys, C=values, reduce_C_function=np.sum,
+        gridsize=(nx, ny), cmap=cmap, norm=norm,
+        mincnt=1, alpha=0.88, edgecolors="face", linewidths=0.0,
+        zorder=2, extent=extent,
     )
 
-    # Boundary outline
-    boundary.plot(ax=plt.gca(), facecolor="none", edgecolor="black", linewidth=0.7)
-
-    # Colorbar
-    cb = plt.colorbar(
-        hb,
-        boundaries=bounds,
-        spacing="proportional",
-        ticks=bounds,
-        extend="max",
-        shrink=0.5,
-        aspect=25,
-        pad=0.01,
-    )
-    cb.set_label("Flooded buildings count", fontsize=12)
-    cb.ax.tick_params(labelsize=10)
-    cb.set_ticks(bounds)
-    cb.set_ticklabels([str(b) for b in bounds])
-
-    # Axis and grid
-    plt.grid(True, which="both", linestyle="-.", linewidth=0.3, color="gray")
-
-    x_offset = 0.08 * (extent[1] - extent[0])
-    y_offset = 0.03 * (extent[3] - extent[2])
-    x_ticks = np.linspace(extent[0] + x_offset, extent[1], 4)
-    y_ticks = np.linspace(extent[2] + y_offset, extent[3], 4)
-
-    plt.xticks(x_ticks, labels=[f"{x:.2f}°W" for x in x_ticks], fontsize=12)
-    plt.yticks(
-        y_ticks, labels=[f"{y:.2f}°N" for y in y_ticks], fontsize=12, rotation=90
+    _add_map_furniture(
+        ax, fig, hb, extent, boundary,
+        cb_label="Flooded buildings count",
+        count_label=f"Flooded buildings: {flooded_count}",
+        scalebar_size_deg=scalebar_size_deg,
+        scale_label=scale_label,
+        cb_bounds=cb_bounds,
+        cb_tick_labels=cb_tick_labels,
     )
 
-    plt.xlabel("Longitude", fontsize=12)
-    plt.ylabel("Latitude", fontsize=12)
-    plt.tick_params(axis="both", labelsize=12)
-
-    # Legend
-    flood_patch = Patch(
-        facecolor="blue", edgecolor="blue", alpha=1, linewidth=1.5, label="Flooded area"
-    )
-    legend = plt.legend(
-        handles=[flood_patch], loc="lower left", fontsize=12, frameon=True
-    )
-    legend.get_frame().set_facecolor("white")
-    legend.get_frame().set_alpha(0.6)
-    legend.get_frame().set_edgecolor("none")
-
-    # Scalebar (uses EPSG:5070)
-    boundary_5070 = boundary.to_crs("EPSG:5070")
-    bounds_5070 = boundary_5070.total_bounds
-    map_width_m = bounds_5070[2] - bounds_5070[0]
-    raw_length = map_width_m * 0.1
-    rounded_m = int(raw_length // 500) * 500
-
-    if rounded_m < 10000:
-        scale_length = rounded_m
-        scale_label = f"{scale_length} m"
-        scalebar_size_deg = scale_length / 111000
-    else:
-        scale_length = int(rounded_m // 1000) * 1000
-        scale_label = f"{scale_length // 1000} km"
-        scalebar_size_deg = scale_length / 111000
-
-    scalebar = AnchoredSizeBar(
-        plt.gca().transData,
-        scalebar_size_deg,
-        scale_label,
-        "lower right",
-        pad=0.3,
-        color="black",
-        frameon=True,
-        size_vertical=0.002,
-        fontproperties=fm.FontProperties(size=10),
-    )
-    scalebar.patch.set_facecolor("white")
-    scalebar.patch.set_alpha(0.9)
-    scalebar.patch.set_edgecolor("none")
-    scalebar.patch.set_linewidth(0)
-    plt.gca().add_artist(scalebar)
-
-    # North Arrow
-    arrow_x = extent[1] - 0.05 * (extent[1] - extent[0])
-    arrow_y = extent[3] - 0.0001 * (extent[3] - extent[2])
-    plt.annotate(
-        "N",
-        xy=(arrow_x, arrow_y - 0.08 * (extent[3] - extent[2])),
-        ha="center",
-        va="center",
-        fontsize=12,
-        bbox=dict(facecolor="white", edgecolor="none", alpha=0.9),
-    )
-
-    plt.gca().text(
-        0.04,
-        0.98,
-        f"Flooded buildings: {flooded_count}",
-        transform=plt.gca().transAxes,
-        fontsize=12,
-        verticalalignment="top",
-        bbox=dict(facecolor="white", alpha=0.6, edgecolor="none"),
-    )
-
-    plt.tight_layout()
-
+    fig.tight_layout()
     flood_basename = os.path.splitext(os.path.basename(flood_map))[0]
     huc_tag = huc_id if huc_id else "unknown"
     plots_dir = Path(f"./SM_results/HUC{huc_tag}/plots")
     plots_dir.mkdir(parents=True, exist_ok=True)
     output_filename = plots_dir / f"BE_{flood_basename}.png"
-    plt.savefig(output_filename, dpi=600)
-    plt.pause(5)
-    plt.close()
+    fig.savefig(output_filename, dpi=300, bbox_inches="tight")
+    plt.pause(3)
+    plt.close(fig)
 
 
 def getbuilding_exposure(huc_id, boundary=None):
-    # Update the filename to match the new class default
     out_dir = Path(f"./SM_results/HUC{huc_id}/BuildingFootprint")
-    building_gpkg = out_dir / "building_footprints.gpkg" 
+    building_gpkg = out_dir / "building_footprints.gpkg"
 
-    # Normalize boundary to GeoDataFrame 
     if boundary is not None:
         if isinstance(boundary, (str, Path)):
             HUC_boundary = gpd.read_file(boundary).to_crs("EPSG:4326")
@@ -256,7 +137,6 @@ def getbuilding_exposure(huc_id, boundary=None):
             print(f"Downloading footprints via ArcGIS REST API...")
             fe.getBuildingFootprint(boundary=HUC_boundary, output_dir=out_dir)
 
-        # Processing loop
         flood_dir = Path(f"./SM_results/HUC{huc_id}")
         flood_files = list(flood_dir.glob("*.tif"))
 
