@@ -1,14 +1,14 @@
-# Flood Inundation Mapping Tool using the OWP HAND-FIM operational framework
-<hr style="border: 1px solid black; margin: 0;">  
-
-[![Version](https://img.shields.io/github/v/release/sdmlua/FIMserv)](https://github.com/sdmlua/FIMserv/releases)
-[![Issues](https://img.shields.io/github/issues/sdmlua/FIMserv)](https://github.com/sdmlua/FIMserv/issues)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0)
-[![PyPI version](https://badge.fury.io/py/fimserve.svg?icon=si%3Apython)](https://badge.fury.io/py/fimserve)
-[![PyPI Downloads](https://static.pepy.tech/badge/fimserve)](https://pepy.tech/projects/fimserve)
-[![Publish Status](https://github.com/sdmlua/FIMserv/actions/workflows/python-publish.yml/badge.svg)](https://github.com/sdmlua/FIMserv/actions/workflows/python-publish.yml)
-
-
+<div align="center">
+  <img src="images/fimserv.png" alt="fimserv" width="170" />
+  <h2>FIMserv: Flood Inundation Mapping Tool using the OWP HAND-FIM operational framework</h2>
+  <p>
+    <a href="https://github.com/sdmlua/FIMserv/releases"><img src="https://img.shields.io/github/v/release/sdmlua/FIMserv" alt="Version" /></a>
+    <a href="https://github.com/sdmlua/FIMserv/issues"><img src="https://img.shields.io/github/issues/sdmlua/FIMserv" alt="Issues" /></a>
+    <a href="https://opensource.org/licenses/GPL-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a><br>
+    <a href="https://badge.fury.io/py/fimserve"><img src="https://badge.fury.io/py/fimserve.svg?icon=si%3Apython" alt="PyPI version" /></a>
+    <a href="https://pepy.tech/projects/fimserve"><img src="https://static.pepy.tech/badge/fimserve" alt="PyPI Downloads" /></a>
+  </p>
+</div>
 
 ### **OWP HAND-FIM 'as a service' (FIMserv)**
 <hr style="border: 1px solid black; margin: 0;">  
