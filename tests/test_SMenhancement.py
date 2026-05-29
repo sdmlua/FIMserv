@@ -6,14 +6,13 @@ Test functions to apply Surrogate Modeling enhancement preprocessing.
 import pandas as pd
 from pathlib import Path
 import fimserve
-from fimserve.datadownload import setup_directories
 
 huc_id = "03020201"
 event_date = ["2016-01-01 00:00:00", "2016-01-01 06:00:00"]
 
 
 # # This sample boundary is solely for testing purposes within the HUC8- 12030105
-test_boundary = "Path/to/boundary.gpkg"  # Path to the clipping boundary within the HUC8 for the FIM enhancement for small area
+test_boundary = "path/to/clipping/boundary.gpkg"  # Path to the clipping boundary within the HUC8 for the FIM enhancement for small area
 
 
 # def test_prepare_forcing():
@@ -33,12 +32,12 @@ test_boundary = "Path/to/boundary.gpkg"  # Path to the clipping boundary within 
 #     print("FORCING data preparation completed.")
 
 
-# def test_applySM():
-#     # Enhance the LOW-Fidelity FIM
-#     fimserve.enhanceFIM(
-#         huc_id=huc_id,
-#     )
-#     print("Surrogate Model based FIM enhancement completed.")
+def test_applySM():
+    # Enhance the LOW-Fidelity FIM
+    fimserve.enhanceFIM(
+        huc_id=huc_id,
+    )
+    print("Surrogate Model based FIM enhancement completed.")
 
 
 def test_get_exposure():

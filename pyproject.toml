@@ -1,6 +1,6 @@
 [project]
 name = "fimserve"
-version = "0.1.97"
+version = "0.1.98"
 description = "Framework which is developed with the purpose of quickly generating Flood Inundation Maps (FIM) for emergency response and risk assessment. It is developed under Surface Dynamics Modeling Lab (SDML)."
 authors = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
 maintainers = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
@@ -49,10 +49,8 @@ dev = [
 # Install with: pip install "fimserve[sm]"
 # This pulls in PyTorch and SM-enhancement runtime dependencies.
 sm = [
-    "torch>=2.3.0",
     "pytorch-lightning>=2.2,<3",
     "torchmetrics>=1.3,<2",
-    "msfootprint>=0.1.31",
 ]
 
 [project.urls]
