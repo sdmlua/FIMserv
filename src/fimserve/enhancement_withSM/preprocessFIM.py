@@ -5,7 +5,6 @@ Date updated: Apr, 2026
 This module contains functions to preprocess the FIM outputs and othe forcings for Surrogate Model based enhancement.
 """
 
-import os
 import pandas as pd
 import rasterio
 import fiona
@@ -195,9 +194,12 @@ def mask_with_PWB(
     input_raster_path, output_raster_path, boundary, input_depth=None, output_depth=None
 ):
     import geopandas as gpd
+
     if not isinstance(boundary, gpd.GeoDataFrame):
         boundary = gpd.GeoDataFrame(geometry=boundary, crs="EPSG:4326")
-    pwb = ExtractPWB(boundary=boundary, save=False, output_filename="permanent_water.gpkg")
+    pwb = ExtractPWB(
+        boundary=boundary, save=False, output_filename="permanent_water.gpkg"
+    )
     shapes = [geom.__geo_interface__ for geom in pwb.gdf.geometry if geom is not None]
 
     with rasterio.open(input_raster_path) as src:
@@ -309,6 +311,7 @@ def _load_boundary_geometries_from_vector(vector_path: Union[str, Path]):
       crs: rasterio CRS or None
     """
     import geopandas as gpd
+
     gdf = gpd.read_file(str(vector_path))
     if gdf.crs is None:
         return [f.__geo_interface__ for f in gdf.geometry if f is not None], None
@@ -355,7 +358,9 @@ def _ensure_list_of_geoms_and_crs(
             crs = CRS.from_user_input(boundary_crs)
         else:
             crs = CRS.from_user_input(boundary_geometry.crs.to_wkt())
-        geoms = [f.__geo_interface__ for f in boundary_geometry.geometry if f is not None]
+        geoms = [
+            f.__geo_interface__ for f in boundary_geometry.geometry if f is not None
+        ]
         if not geoms:
             raise ValueError("boundary GeoDataFrame has no valid geometries.")
         return geoms, crs
@@ -498,7 +503,9 @@ def clip_all_forcings_if_boundary_overlaps(
 
     # Already clipped from a prior run — originals were deleted, only _clipped files remain
     if not originals and clipped_only:
-        print("Forcing rasters already clipped from a prior run — reusing existing clipped files.\n")
+        print(
+            "Forcing rasters already clipped from a prior run — reusing existing clipped files.\n"
+        )
         mapping = {}
         for p in clipped_only:
             # Reconstruct the original key name (without _clipped suffix)
@@ -524,7 +531,9 @@ def clip_all_forcings_if_boundary_overlaps(
                 non_overlapping.append(tif)
                 continue
 
-            b_crs_local = b_crs if b_crs is not None else CRS.from_user_input(boundary_crs)
+            b_crs_local = (
+                b_crs if b_crs is not None else CRS.from_user_input(boundary_crs)
+            )
 
             # Transform boundary into raster CRS before overlap check
             if src.crs != b_crs_local:
@@ -693,7 +702,9 @@ def prepare_FORCINGs(
     if event_date is None:
         # No date — use whatever already exists in the output folder
         if inundation_dir.exists():
-            fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
+            fim_files = sorted(
+                f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts
+            )
             if fim_files:
                 print(
                     f"No event_date provided. Found {len(fim_files)} existing FIM file(s) "
@@ -740,7 +751,9 @@ def prepare_FORCINGs(
         else:
             print("All requested FIM files already exist — skipping generation.\n")
 
-        fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
+        fim_files = sorted(
+            f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts
+        )
 
     else:
         # Forecast — unchanged behaviour
@@ -754,7 +767,9 @@ def prepare_FORCINGs(
             sort_by=sort_by,
         )
         print("FIM files generated successfully.\n")
-        fim_files = sorted(f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts)
+        fim_files = sorted(
+            f for f in inundation_dir.glob("*.tif") if "processing" not in f.parts
+        )
 
     # PREPROCESSING THE FIM FILES
     print("Preprocessing the FIM files...\n")

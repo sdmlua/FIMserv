@@ -1,7 +1,5 @@
 import warnings
 
-from fimserve.fimevaluation.fims_setup import fim_lookup
-
 warnings.simplefilter("ignore")
 
 from .datadownload import DownloadHUC8
@@ -65,7 +63,7 @@ def getpopulation_exposure(*args, **kwargs):
 
 __all__ = [
     "DownloadHUC8",
-    "getNWMRetrospectivedata",
+    "getNWMretrospectivedata",
     "runOWPHANDFIM",
     "getNWMForecasteddata",
     "getGEOGLOWSstreamflow",

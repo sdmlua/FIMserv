@@ -67,6 +67,7 @@ def save_image(image: torch.Tensor, path: Path, reference_tif: str):
         # Apply water body mask using ExtractPWB — same as FIM preprocessing
         import geopandas as gpd
         from shapely.geometry import box as shapely_box
+
         with rasterio.open(reference_tif) as ref:
             b = ref.bounds
             epsg = ref.crs.to_epsg()
@@ -176,7 +177,7 @@ def predict_optimized(
 
                 processed_steps += len(batch_patches)
                 print(
-                    f"   Progress: {processed_steps}/{total_steps} ({100*processed_steps/total_steps:.1f}%)",
+                    f"   Progress: {processed_steps}/{total_steps} ({100 * processed_steps / total_steps:.1f}%)",
                     end="\r",
                 )
 
@@ -199,7 +200,7 @@ def predict_optimized(
             weighted_prediction_sum[:, r0:r1, c0:c1] += pred_valid * weight_valid
             weight_sum[:, r0:r1, c0:c1] += weight_valid
 
-        print(f"   Progress: 100% - Inference Complete.")
+        print("   Progress: 100% - Inference Complete.")
 
     # NORMALIZE AND FINALIZE
     epsilon = 1e-8
@@ -219,7 +220,7 @@ def predict_optimized(
 def enhanceFIM(huc_id, patch_size=(256, 256), batch_size=32):
 
     device_type = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"\n{'='*60}\nSYSTEM: {device_type.upper()}\n{'='*60}")
+    print(f"\n{'=' * 60}\nSYSTEM: {device_type.upper()}\n{'=' * 60}")
 
     data_dir = Path(f"./HUC{huc_id}_forcings/")
     model = AttentionUNet(channel=8)
@@ -297,4 +298,4 @@ def enhanceFIM(huc_id, patch_size=(256, 256), batch_size=32):
         save_image(x, pred_path, str(lf_path))
         print(f"✓ Saved: {pred_path}")
 
-    print(f"\n{'='*60}\nCOMPLETED\n{'='*60}")
+    print(f"\n{'=' * 60}\nCOMPLETED\n{'=' * 60}")

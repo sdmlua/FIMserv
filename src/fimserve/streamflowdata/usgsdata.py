@@ -1,14 +1,11 @@
 import os
-import teehr
 import shutil
 from pathlib import Path
 import pandas as pd
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
 from teehr.fetching.usgs.usgs import usgs_to_parquet
 
 from ..datadownload import setup_directories
-from ..plot.usgs import getUSGSdata
 from ..plot import GetUSGSIDandCorrFID
 from .nwmretrospective import determinedatatimeformat
 
@@ -113,7 +110,7 @@ def getUSGSsitedata(
     """
     code_dir, data_dir, output_dir = setup_directories()
     HUC_dir = os.path.join(output_dir, f"flood_{huc}")
-    featureID_dir = os.path.join(HUC_dir, f"feature_IDs.csv")
+    featureID_dir = os.path.join(HUC_dir, "feature_IDs.csv")
 
     def process_value_times(huc_key, value_times_list, allow_cleanup=False):
         site_data = GetUSGSIDandCorrFID(huc_key)

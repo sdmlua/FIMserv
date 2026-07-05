@@ -1,8 +1,5 @@
 import os
-import teehr
-from pathlib import Path
 import pandas as pd
-from datetime import datetime
 import matplotlib.pyplot as plt
 
 from ..datadownload import setup_directories
@@ -11,6 +8,7 @@ from ..datadownload import setup_directories
 def _notebook_env() -> str:
     try:
         from IPython import get_ipython
+
         shell = get_ipython()
         if shell is None:
             return "none"
@@ -19,6 +17,7 @@ def _notebook_env() -> str:
             return "colab"
 
         import sys
+
         if "google.colab" in sys.modules:
             return "colab"
 

@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 
 from ..datadownload import setup_directories
 
+
 def _notebook_env() -> str:
     try:
         from IPython import get_ipython
+
         shell = get_ipython()
         if shell is None:
             return "none"
@@ -15,6 +17,7 @@ def _notebook_env() -> str:
             return "colab"
 
         import sys
+
         if "google.colab" in sys.modules:
             return "colab"
 
@@ -114,7 +117,7 @@ def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, en
         os.makedirs(plt_dir, exist_ok=True)
         plot_filename = f"NWMStreamflow_{plotted_ids[0]}.png"
         plot_path = os.path.join(plt_dir, plot_filename)
-        
+
         plt.savefig(plot_path, dpi=500, bbox_inches="tight")
         print(f"Static plot saved to: {plot_path}")
 
@@ -197,6 +200,7 @@ def plotNWMStreamflowData(dischargedata, feature_ids, output_dir, start_date, en
             f"\033[1m****Data not found for the following NWM feature IDs: "
             f"{', '.join(map(str, missing_ids))}****\033[0m"
         )
+
 
 # Main function to drive the process
 def plotNWMStreamflow(huc, start_date, end_date, feature_ids=None):

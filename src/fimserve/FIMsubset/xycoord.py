@@ -2,7 +2,6 @@ import os
 import glob
 import geopandas as gpd
 from shapely.geometry import Point
-from pyproj import CRS
 import rasterio
 from rasterio.mask import mask
 

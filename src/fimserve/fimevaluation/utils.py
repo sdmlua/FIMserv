@@ -8,7 +8,10 @@ for HAND FIM model outputs along with other supporting functions
 """
 
 from __future__ import annotations
-import os, re, json, datetime as dt
+import os
+import re
+import json
+import datetime as dt
 from typing import List, Dict, Any, Optional
 
 import urllib.parse
@@ -83,24 +86,24 @@ def _record_day(rec: Dict[str, Any]) -> Optional[dt.date]:
     if rec.get("date_ymd"):
         try:
             return dt.date.fromisoformat(rec["date_ymd"])
-        except:
+        except Exception:
             pass
     if rec.get("event_ts") and len(str(rec["event_ts"])) >= 8:
         try:
             return dt.datetime.strptime(str(rec["event_ts"])[:8], "%Y%m%d").date()
-        except:
+        except Exception:
             pass
     if rec.get("start_date_ymd"):
         try:
             return dt.date.fromisoformat(rec["start_date_ymd"])
-        except:
+        except Exception:
             pass
     # Fallback
     raw = rec.get("date_of_flood")
     if isinstance(raw, str) and len(raw) >= 8:
         try:
             return dt.datetime.strptime(raw[:8], "%Y%m%d").date()
-        except:
+        except Exception:
             pass
 
     return None
@@ -124,7 +127,7 @@ def _pretty_date_for_print(rec: Dict[str, Any]) -> str:
         return f"{start} to {end}"
     raw = rec.get("date_of_flood")
     if isinstance(raw, str) and "T" in raw and len(raw) >= 11:
-        return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}T{raw.split('T',1)[1][:2]}"
+        return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}T{raw.split('T', 1)[1][:2]}"
     ymd = rec.get("date_ymd")
     if isinstance(ymd, str) and _YMD_RE.match(ymd):
         return ymd

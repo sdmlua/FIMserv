@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.metrics import mean_squared_error, r2_score
 
 from ..plot.nwmfid import getFIDdata
 from ..plot.usgs import getUSGSdata

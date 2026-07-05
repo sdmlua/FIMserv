@@ -2,10 +2,8 @@ import s3fs
 import geopandas as gpd
 import os
 import tempfile
-import fiona
 import rasterio
 from pathlib import Path
-import numpy as np
 from rasterio.mask import mask
 
 fs = s3fs.S3FileSystem(anon=True)
@@ -92,7 +90,11 @@ def get_forcings(huc_id, downloadforcings=True):
 
 
 def get_population_GRID(
-    boundary_gdf=None, huc_id=None, fs=fs, bucket=bucket_name, prefix="SM_dataset/gridded_population/"
+    boundary_gdf=None,
+    huc_id=None,
+    fs=fs,
+    bucket=bucket_name,
+    prefix="SM_dataset/gridded_population/",
 ):
     files = fs.ls(f"{bucket}/{prefix}")
 
@@ -101,7 +103,9 @@ def get_population_GRID(
         huc_specific = f"{bucket}/{prefix}HUC{huc_id}_populationGRID.tif"
         if huc_specific in files:
             tif_key = huc_specific
-            print(f"Using HUC-specific population raster: HUC{huc_id}_populationGRID.tif")
+            print(
+                f"Using HUC-specific population raster: HUC{huc_id}_populationGRID.tif"
+            )
 
     if tif_key is None:
         tif_key = next((f for f in files if f.endswith(".tif")), None)
@@ -119,7 +123,13 @@ def get_population_GRID(
             geoms = [geom.__geo_interface__ for geom in boundary_gdf.geometry]
             out_image, out_transform = mask(src, geoms, crop=True)
             out_meta = src.meta.copy()
-            out_meta.update({"height": out_image.shape[1], "width": out_image.shape[2], "transform": out_transform})
+            out_meta.update(
+                {
+                    "height": out_image.shape[1],
+                    "width": out_image.shape[2],
+                    "transform": out_transform,
+                }
+            )
         else:
             out_image = src.read()
             out_meta = src.meta.copy()

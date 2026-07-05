@@ -1,11 +1,8 @@
 import os
-import glob
 import rasterio
 from rasterio.mask import mask
 from pathlib import Path
 import geopandas as gpd
-
-from ..datadownload import setup_directories
 
 
 def checkSHP(input_file):

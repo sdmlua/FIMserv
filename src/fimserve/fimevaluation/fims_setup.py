@@ -4,14 +4,11 @@ Author: Supath Dhital (sdhital@ua.edu)
 """
 
 from __future__ import annotations
-from typing import Optional, Dict, Any, List, Tuple, DefaultDict
+from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 import os
-import rasterio
-from rasterio.merge import merge
 import tempfile
 import shutil
-from collections import defaultdict
 
 # Internal utilities
 from .utils import (
@@ -391,8 +388,9 @@ class FIMService:
             rec = target_recs[0]
             r_tier = str(rec.get("tier") or rec.get("quality") or "").upper()
             if "HWM" in r_tier:
-                start_date, end_date = rec.get("start_date_ymd"), rec.get(
-                    "end_date_ymd"
+                start_date, end_date = (
+                    rec.get("start_date_ymd"),
+                    rec.get("end_date_ymd"),
                 )
             elif "TIER 4" in r_tier or "TIER4" in r_tier:
                 return_period = rec.get("return_period")
@@ -521,7 +519,7 @@ class FIMService:
                 return f"{label[:4]}-{label[4:6]}-{label[6:]}"
             elif len(label) >= 10:
                 return f"{label[:4]}-{label[4:6]}-{label[6:8]}T{label[8:10]}"
-        except:
+        except Exception:
             pass
         return None
 

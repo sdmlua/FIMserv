@@ -6,7 +6,6 @@ import pandas as pd
 from pathlib import Path
 import netCDF4 as nc
 from datetime import datetime, timedelta, timezone
-from bs4 import BeautifulSoup
 
 from ..datadownload import setup_directories
 
@@ -26,7 +25,8 @@ def adjust_hour(hour, forecast_range):
 
 
 # Delete the forecast directory if it is empty
-import os, shutil, stat, time
+import stat
+import time
 
 
 def _rmtree(path: str, retries: int = 3, delay: float = 0.2) -> None:
@@ -319,7 +319,7 @@ def main(
             print(
                 f"Adjusted forecast hour from {original_hour} to {current_download_hour} for {forecast_range} as per the forecast range and data availability rules."
             )
-    print(f"Starting download attempts...")
+    print("Starting download attempts...")
 
     """Retry downloading forecast files by decrementing the forecast hour based on forecast range:
     - shortrange: tries every past hour (up to 24 hours)

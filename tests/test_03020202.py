@@ -1,5 +1,4 @@
 import fimserve as fm
-import pandas as pd
 
 huc = "03020202"
 
@@ -56,4 +55,4 @@ def test_runfim():
     # )
 
     # Run the FIM model
-    # fm.runOWPHANDFIM(huc, depth=True)
+    fm.runOWPHANDFIM(huc, depth=True)

@@ -1,5 +1,4 @@
 import fimserve as fm
-import pandas as pd
 
 huc = "12060102"
 

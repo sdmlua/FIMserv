@@ -1,5 +1,4 @@
 import fimserve as fm
-import pandas as pd
 
 
 # Look for the benchmark FIM data for the HUC8 and event date

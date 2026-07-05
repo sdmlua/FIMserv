@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import shutil
+import numpy as np
 import rasterio
 import subprocess
 from dotenv import load_dotenv
@@ -15,8 +16,10 @@ from rasterio.io import MemoryFile
 from .datadownload import setup_directories
 
 
-# Incase the final outcome has wrong CRS tag
-def _retag_5070_lzw_inplace(tif_path: str) -> None:
+# Incase the final outcome has wrong CRS tag.
+# binarize=True converts the raster to binary (value > 0 -> 1, else 0),
+# used for the inundation extent; depth rasters keep their original values.
+def _retag_5070_lzw_inplace(tif_path: str, binarize: bool = False) -> None:
     with rasterio.open(tif_path) as src:
         profile = src.profile.copy()
         profile.update(driver="GTiff", crs="EPSG:5070", compress="lzw", tiled=True)
@@ -24,7 +27,10 @@ def _retag_5070_lzw_inplace(tif_path: str) -> None:
         with MemoryFile() as mem:
             with mem.open(**profile) as dst:
                 for b in range(1, src.count + 1):
-                    dst.write(src.read(b), b)
+                    band = src.read(b)
+                    if binarize:
+                        band = np.where(band > 0, 1, 0).astype(band.dtype)
+                    dst.write(band, b)
                 try:
                     cmap = src.colormap(1)
                     if cmap:
@@ -111,7 +117,7 @@ def runfim(code_dir, output_dir, HUC_code, data_dir, depth=False):
                     if os.path.exists(dest_file):
                         os.remove(dest_file)
                     shutil.move(inundation_file, dest_file)
-                _retag_5070_lzw_inplace(dest_file)
+                _retag_5070_lzw_inplace(dest_file, binarize=True)
 
             if depth and depth_file and os.path.exists(depth_file):
                 dest_depth = os.path.join(inundation_dir, os.path.basename(depth_file))

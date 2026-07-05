@@ -17,7 +17,6 @@ GLOBAL_STATS = {
 
 # INFERENCE DATA PREPROCESSOR
 class InferenceDataPreprocessor:
-
     STATIC_FEATURES = [
         "curve_number",
         "elevation",

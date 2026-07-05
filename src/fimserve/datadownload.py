@@ -156,7 +156,7 @@ def DownloadHUC8(huc, stream_order=None, version=None):
     EnvFile(code_dir)
     HUC_dir = os.path.join(output_dir, f"flood_{huc}")
     hydrotable_dir = os.path.join(HUC_dir, str(huc), "hydrotable.csv")
-    featureID_dir = os.path.join(HUC_dir, f"feature_IDs.csv")
+    featureID_dir = os.path.join(HUC_dir, "feature_IDs.csv")
     if stream_order is None:
         uniqueFID(hydrotable_dir, featureID_dir)
     else:

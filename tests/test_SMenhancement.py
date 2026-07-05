@@ -3,8 +3,6 @@ Test functions to apply Surrogate Modeling enhancement preprocessing.
 """
 
 # INITIALIZE THE LOCATIONS (HUC8) AND THE EVENT DETAILS
-import pandas as pd
-from pathlib import Path
 import fimserve
 
 huc_id = "03020201"

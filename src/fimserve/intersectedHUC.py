@@ -2,14 +2,12 @@ import s3fs
 import tempfile
 from io import BytesIO
 import json
-import math
 import requests
 import rasterio
 import geopandas as gpd
-import pandas as pd
 from pathlib import Path
-from typing import Dict, Optional, Union, Tuple, List, Any
-from shapely.geometry import box, shape
+from typing import Dict, Optional, Union, List
+from shapely.geometry import box
 from shapely.ops import unary_union
 
 # ---THIS S3 approach takes time- so it is retrieved now and used the arcgis REST API approach--

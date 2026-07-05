@@ -1,6 +1,6 @@
 [project]
 name = "fimserve"
-version = "0.1.98"
+version = "0.1.2"
 description = "Framework which is developed with the purpose of quickly generating Flood Inundation Maps (FIM) for emergency response and risk assessment. It is developed under Surface Dynamics Modeling Lab (SDML)."
 authors = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
 maintainers = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
@@ -43,7 +43,7 @@ dev = [
     "pytest>=8.3,<8.4",
     "sphinx<7.0",
     "sphinx-autobuild>=2024.10.3",
-    "black"
+    "ruff>=0.15"
 ]
 
 # Install with: pip install "fimserve[sm]"
@@ -73,3 +73,15 @@ exclude = ["tests*"]
 minversion = "6.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+extend-exclude = ["docs", "GeoGLOWS", "*.ipynb"]
+
+[tool.ruff.lint]
+# E402/F403/F405: module-level star imports and late imports are part of the
+# package's existing style. F841 fixes are unsafe and left for manual cleanup.
+ignore = ["E402", "F403", "F405", "F841"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

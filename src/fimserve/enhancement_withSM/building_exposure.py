@@ -10,7 +10,13 @@ from pathlib import Path
 from rasterio.mask import mask
 
 from .interactS3 import getHUC8BoundaryByID
-from .pop_exposure import _adaptive_hexbin_gridsize, _scalebar_for_extent, _discrete_norm_and_cmap, _add_map_furniture, FLOOD_COLOR, _FLOOD_RGB
+from .pop_exposure import (
+    _adaptive_hexbin_gridsize,
+    _scalebar_for_extent,
+    _discrete_norm_and_cmap,
+    _add_map_furniture,
+    _FLOOD_RGB,
+)
 
 
 def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
@@ -75,8 +81,9 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
 
     # Probe hex counts for discrete colour normalisation
     fig_temp, ax_temp = plt.subplots()
-    temp_hb = ax_temp.hexbin(xs, ys, C=values, reduce_C_function=np.sum,
-                              gridsize=(nx, ny), extent=extent)
+    temp_hb = ax_temp.hexbin(
+        xs, ys, C=values, reduce_C_function=np.sum, gridsize=(nx, ny), extent=extent
+    )
     hex_counts = temp_hb.get_array()
     plt.close(fig_temp)
 
@@ -92,14 +99,27 @@ def get_building_exposure(boundary, flood_map, building_gpkg, huc_id=None):
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.imshow(flood_plot, extent=extent, origin="upper", zorder=1)
     hb = ax.hexbin(
-        xs, ys, C=values, reduce_C_function=np.sum,
-        gridsize=(nx, ny), cmap=cmap, norm=norm,
-        mincnt=1, alpha=0.88, edgecolors="face", linewidths=0.0,
-        zorder=2, extent=extent,
+        xs,
+        ys,
+        C=values,
+        reduce_C_function=np.sum,
+        gridsize=(nx, ny),
+        cmap=cmap,
+        norm=norm,
+        mincnt=1,
+        alpha=0.88,
+        edgecolors="face",
+        linewidths=0.0,
+        zorder=2,
+        extent=extent,
     )
 
     _add_map_furniture(
-        ax, fig, hb, extent, boundary,
+        ax,
+        fig,
+        hb,
+        extent,
+        boundary,
         cb_label="Flooded buildings count",
         count_label=f"Flooded buildings: {flooded_count}",
         scalebar_size_deg=scalebar_size_deg,
@@ -134,14 +154,16 @@ def getbuilding_exposure(huc_id, boundary=None):
 
     try:
         if not building_gpkg.exists():
-            print(f"Downloading footprints via ArcGIS REST API...")
+            print("Downloading footprints via ArcGIS REST API...")
             fe.getBuildingFootprint(boundary=HUC_boundary, output_dir=out_dir)
 
         flood_dir = Path(f"./SM_results/HUC{huc_id}")
         flood_files = list(flood_dir.glob("*.tif"))
 
         for flood_map in flood_files:
-            get_building_exposure(HUC_boundary, str(flood_map), str(building_gpkg), huc_id=huc_id)
+            get_building_exposure(
+                HUC_boundary, str(flood_map), str(building_gpkg), huc_id=huc_id
+            )
 
     finally:
         if out_dir.exists():

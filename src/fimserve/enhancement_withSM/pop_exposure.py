@@ -15,8 +15,9 @@ from matplotlib.colors import BoundaryNorm
 
 from .interactS3 import getHUC8BoundaryByID, get_population_GRID
 
-FLOOD_COLOR = "#0000FF"   # blue — used for both overlay and legend patch
-_FLOOD_RGB  = (0x00 / 255, 0x00 / 255, 0xFF / 255)
+FLOOD_COLOR = "#0000FF"  # blue — used for both overlay and legend patch
+_FLOOD_RGB = (0x00 / 255, 0x00 / 255, 0xFF / 255)
+
 
 def _adaptive_hexbin_gridsize(extent, n_hex_across=50):
     """
@@ -30,7 +31,7 @@ def _adaptive_hexbin_gridsize(extent, n_hex_across=50):
     m_per_deg_lon = 111320 * np.cos(np.radians(avg_lat))
     m_per_deg_lat = 111320
 
-    map_width_m  = (extent[1] - extent[0]) * m_per_deg_lon
+    map_width_m = (extent[1] - extent[0]) * m_per_deg_lon
     map_height_m = (extent[3] - extent[2]) * m_per_deg_lat
 
     nx = max(5, n_hex_across)
@@ -66,12 +67,13 @@ def _discrete_norm_and_cmap(hex_values, n_bins=6):
     base = cm.get_cmap("RdYlGn_r")
     colors = [base(0.15 + 0.85 * i / max(n_colors - 1, 1)) for i in range(n_colors)]
     from matplotlib.colors import ListedColormap
+
     cmap = ListedColormap(colors)
     norm = BoundaryNorm(bounds, ncolors=n_colors)
 
     def _fmt(v):
         if v >= 1000:
-            return f"{v/1000:.1f}k" if v % 1000 else f"{int(v//1000)}k"
+            return f"{v / 1000:.1f}k" if v % 1000 else f"{int(v // 1000)}k"
         return f"{int(v)}" if v == int(v) else f"{v:.2g}"
 
     tick_labels = [_fmt(b) for b in bounds]
@@ -97,15 +99,28 @@ def _scalebar_for_extent(boundary_gdf_4326):
     return scalebar_size_deg, scale_label
 
 
-def _add_map_furniture(ax, fig, hb, extent, boundary, cb_label, count_label,
-                       scalebar_size_deg, scale_label, cb_bounds=None, cb_tick_labels=None):
+def _add_map_furniture(
+    ax,
+    fig,
+    hb,
+    extent,
+    boundary,
+    cb_label,
+    count_label,
+    scalebar_size_deg,
+    scale_label,
+    cb_bounds=None,
+    cb_tick_labels=None,
+):
     """Attach colorbar, grid, ticks, scalebar, north arrow and count annotation to ax."""
     cb = fig.colorbar(hb, ax=ax, shrink=0.45, aspect=20, pad=0.01)
     cb.set_label(cb_label, fontsize=11)
     cb.ax.tick_params(labelsize=9)
     if cb_bounds is not None:
         cb.set_ticks(cb_bounds)
-        cb.set_ticklabels(cb_tick_labels if cb_tick_labels else [str(b) for b in cb_bounds])
+        cb.set_ticklabels(
+            cb_tick_labels if cb_tick_labels else [str(b) for b in cb_bounds]
+        )
 
     ax.set_xlim(extent[0], extent[1])
     ax.set_ylim(extent[2], extent[3])
@@ -120,11 +135,19 @@ def _add_map_furniture(ax, fig, hb, extent, boundary, cb_label, count_label,
     ax.set_xticks(x_ticks)
     ax.set_xticklabels([f"{x:.2f}°W" for x in x_ticks], fontsize=11)
     ax.set_yticks(y_ticks)
-    ax.set_yticklabels([f"{y:.2f}°N" for y in y_ticks], fontsize=11, rotation=90, va="center")
+    ax.set_yticklabels(
+        [f"{y:.2f}°N" for y in y_ticks], fontsize=11, rotation=90, va="center"
+    )
 
     scalebar = AnchoredSizeBar(
-        ax.transData, scalebar_size_deg, scale_label, "lower right",
-        pad=0.3, color="black", frameon=True, size_vertical=0.002,
+        ax.transData,
+        scalebar_size_deg,
+        scale_label,
+        "lower right",
+        pad=0.3,
+        color="black",
+        frameon=True,
+        size_vertical=0.002,
         fontproperties=fm.FontProperties(size=10),
     )
     scalebar.patch.set_facecolor("white")
@@ -136,20 +159,41 @@ def _add_map_furniture(ax, fig, hb, extent, boundary, cb_label, count_label,
     arrow_x = extent[1] - 0.05 * (extent[1] - extent[0])
     arrow_y = extent[3] - 0.08 * (extent[3] - extent[2])
     ax.annotate(
-        "N", xy=(arrow_x, arrow_y), ha="center", va="center",
-        fontsize=13, fontweight="bold",
+        "N",
+        xy=(arrow_x, arrow_y),
+        ha="center",
+        va="center",
+        fontsize=13,
+        fontweight="bold",
         bbox=dict(facecolor="white", edgecolor="none", alpha=0.9),
     )
 
-    flood_patch = Patch(facecolor=FLOOD_COLOR, edgecolor=FLOOD_COLOR,
-                        label="Flood Inundation Extent", linewidth=0)
-    ax.legend(handles=[flood_patch], loc="lower left", fontsize=11,
-              frameon=True, framealpha=0.85, edgecolor="none",
-              handlelength=1.2, handleheight=1.2)
+    flood_patch = Patch(
+        facecolor=FLOOD_COLOR,
+        edgecolor=FLOOD_COLOR,
+        label="Flood Inundation Extent",
+        linewidth=0,
+    )
+    ax.legend(
+        handles=[flood_patch],
+        loc="lower left",
+        fontsize=11,
+        frameon=True,
+        framealpha=0.85,
+        edgecolor="none",
+        handlelength=1.2,
+        handleheight=1.2,
+    )
     ax.text(
-        0.02, 0.98, count_label, transform=ax.transAxes, fontsize=12,
+        0.02,
+        0.98,
+        count_label,
+        transform=ax.transAxes,
+        fontsize=12,
         verticalalignment="top",
-        bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", boxstyle="round,pad=0.3"),
+        bbox=dict(
+            facecolor="white", alpha=0.7, edgecolor="none", boxstyle="round,pad=0.3"
+        ),
     )
 
     boundary.plot(ax=ax, facecolor="none", edgecolor="black", linewidth=0.8, zorder=3)
@@ -171,8 +215,12 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
 
     # Convert flood bounds to 4326 for plotting (extent must be in same CRS as boundary overlay)
     from rasterio.warp import transform_bounds as _transform_bounds
-    flood_bounds = _transform_bounds(flood_crs, "EPSG:4326", *flood_bounds_native) \
-        if flood_crs.to_epsg() != 4326 else flood_bounds_native
+
+    flood_bounds = (
+        _transform_bounds(flood_crs, "EPSG:4326", *flood_bounds_native)
+        if flood_crs.to_epsg() != 4326
+        else flood_bounds_native
+    )
     boundary = boundary_4326
 
     pop_transform = pop_meta["transform"]
@@ -181,15 +229,26 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
     pop_array_work = pop_array.astype(np.float64)
     if pop_crs.to_epsg() != flood_crs.to_epsg():
         from rasterio.warp import calculate_default_transform, reproject as _reproject
+
         print(f"Auto-reprojecting population data from {pop_crs} → {flood_crs}")
         h, w = pop_array_work.shape
-        t2, w2, h2 = calculate_default_transform(pop_crs, flood_crs, w, h,
-                                                  *rasterio.transform.array_bounds(h, w, pop_transform))
+        t2, w2, h2 = calculate_default_transform(
+            pop_crs,
+            flood_crs,
+            w,
+            h,
+            *rasterio.transform.array_bounds(h, w, pop_transform),
+        )
         reproj = np.zeros((h2, w2), dtype=np.float64)
-        _reproject(source=pop_array_work, destination=reproj,
-                   src_transform=pop_transform, src_crs=pop_crs,
-                   dst_transform=t2, dst_crs=flood_crs,
-                   resampling=Resampling.nearest)
+        _reproject(
+            source=pop_array_work,
+            destination=reproj,
+            src_transform=pop_transform,
+            src_crs=pop_crs,
+            dst_transform=t2,
+            dst_crs=flood_crs,
+            resampling=Resampling.nearest,
+        )
         pop_array_work = reproj
         pop_transform = t2
 
@@ -209,23 +268,32 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
 
     # Scale pop counts to flood pixel area — convert pixel sizes to metres for any CRS
     from pyproj import Transformer, CRS as ProjCRS
+
     def _pixel_size_m(crs, transform, nrows):
         if ProjCRS.from_user_input(crs).is_geographic:
             avg_lat = transform.f + transform.e * nrows / 2
             return abs(transform.a) * 111320 * np.cos(np.radians(avg_lat))
         return abs(transform.a)
 
-    pop_nrows = pop_array_work.shape[0] if pop_array_work.ndim == 2 else pop_array_work.shape[-2]
-    pop_res_m   = _pixel_size_m(pop_crs,   pop_transform,  pop_nrows)
+    pop_nrows = (
+        pop_array_work.shape[0]
+        if pop_array_work.ndim == 2
+        else pop_array_work.shape[-2]
+    )
+    pop_res_m = _pixel_size_m(pop_crs, pop_transform, pop_nrows)
     flood_res_m = _pixel_size_m(flood_crs, flood_transform, flood_shape[0])
     pop_data_resampled *= (flood_res_m / pop_res_m) ** 2
 
-    exposed_population = np.where(flood_data > 0, np.maximum(pop_data_resampled, 0.0), 0.0)
+    exposed_population = np.where(
+        flood_data > 0, np.maximum(pop_data_resampled, 0.0), 0.0
+    )
     total_exposed = exposed_population.sum()
     print(f"Total exposed population:\n------------------------\n{total_exposed:.1f}")
 
     row_inds, col_inds = np.where(exposed_population > 0)
-    xs_nat, ys_nat = rasterio.transform.xy(flood_transform, row_inds, col_inds, offset="center")
+    xs_nat, ys_nat = rasterio.transform.xy(
+        flood_transform, row_inds, col_inds, offset="center"
+    )
     # Convert point coords to 4326 for plotting (extent is already in 4326)
     if flood_crs.to_epsg() != 4326:
         _tr = Transformer.from_crs(flood_crs, "EPSG:4326", always_xy=True)
@@ -238,6 +306,7 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
 
     # Clip boundary to flood extent for scalebar computation
     from shapely.geometry import box
+
     flood_box = gpd.GeoDataFrame(geometry=[box(*flood_bounds)], crs="EPSG:4326")
     boundary_clipped = gpd.clip(boundary, flood_box)
     if boundary_clipped.empty:
@@ -249,8 +318,9 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
 
     # Probe hex sums to build discrete colorbar
     fig_temp, ax_temp = plt.subplots()
-    temp_hb = ax_temp.hexbin(xs, ys, C=values, reduce_C_function=np.sum,
-                              gridsize=(nx, ny), extent=extent)
+    temp_hb = ax_temp.hexbin(
+        xs, ys, C=values, reduce_C_function=np.sum, gridsize=(nx, ny), extent=extent
+    )
     hex_values = temp_hb.get_array()
     plt.close(fig_temp)
 
@@ -267,14 +337,27 @@ def get_population_exposure(boundary_gdf, flood_map, pop_array, pop_meta, huc_id
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.imshow(flood_plot, extent=extent, origin="upper", zorder=1)
     hb = ax.hexbin(
-        xs, ys, C=values, reduce_C_function=np.sum,
-        gridsize=(nx, ny), cmap=cmap, norm=norm,
-        mincnt=1, alpha=0.88, edgecolors="face", linewidths=0.0,
-        zorder=2, extent=extent,
+        xs,
+        ys,
+        C=values,
+        reduce_C_function=np.sum,
+        gridsize=(nx, ny),
+        cmap=cmap,
+        norm=norm,
+        mincnt=1,
+        alpha=0.88,
+        edgecolors="face",
+        linewidths=0.0,
+        zorder=2,
+        extent=extent,
     )
 
     _add_map_furniture(
-        ax, fig, hb, extent, boundary,
+        ax,
+        fig,
+        hb,
+        extent,
+        boundary,
         cb_label="Exposed population (persons)",
         count_label=f"Exposed population: {total_exposed:.0f}",
         scalebar_size_deg=scalebar_size_deg,
@@ -325,12 +408,26 @@ def getpopulation_exposure(huc_id, boundary=None, pop_raster=None):
 
             # Reproject to flood CRS if they differ
             if flood_crs_target is not None and pop_src_crs != flood_crs_target:
-                from rasterio.warp import calculate_default_transform, reproject as _reproject
-                print(f"Reprojecting population raster from {pop_src_crs} to {flood_crs_target}")
-                transform_reproj, width_reproj, height_reproj = calculate_default_transform(
-                    pop_src_crs, flood_crs_target, src.width, src.height, *src.bounds
+                from rasterio.warp import (
+                    calculate_default_transform,
+                    reproject as _reproject,
                 )
-                reproj_array = np.zeros((src.count, height_reproj, width_reproj), dtype=np.float64)
+
+                print(
+                    f"Reprojecting population raster from {pop_src_crs} to {flood_crs_target}"
+                )
+                transform_reproj, width_reproj, height_reproj = (
+                    calculate_default_transform(
+                        pop_src_crs,
+                        flood_crs_target,
+                        src.width,
+                        src.height,
+                        *src.bounds,
+                    )
+                )
+                reproj_array = np.zeros(
+                    (src.count, height_reproj, width_reproj), dtype=np.float64
+                )
                 _reproject(
                     source=src.read().astype(np.float64),
                     destination=reproj_array,
@@ -341,8 +438,15 @@ def getpopulation_exposure(huc_id, boundary=None, pop_raster=None):
                     resampling=Resampling.nearest,
                 )
                 meta = src.meta.copy()
-                meta.update({"crs": flood_crs_target, "transform": transform_reproj,
-                             "width": width_reproj, "height": height_reproj, "dtype": "float64"})
+                meta.update(
+                    {
+                        "crs": flood_crs_target,
+                        "transform": transform_reproj,
+                        "width": width_reproj,
+                        "height": height_reproj,
+                        "dtype": "float64",
+                    }
+                )
                 work_array = reproj_array
             else:
                 work_array = src.read().astype(np.float64)
@@ -352,17 +456,27 @@ def getpopulation_exposure(huc_id, boundary=None, pop_raster=None):
                 # Extra boundary provided — clip before analysis
                 boundary_reproj = HUC_boundary.to_crs(meta["crs"])
                 geoms = [mapping(geom) for geom in boundary_reproj.geometry]
-                import tempfile, os
+                import tempfile
+                import os
+
                 with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp:
                     tmp_path = tmp.name
                 try:
-                    with rasterio.open(tmp_path, "w", **{**meta, "count": work_array.shape[0]}) as tmp_ds:
+                    with rasterio.open(
+                        tmp_path, "w", **{**meta, "count": work_array.shape[0]}
+                    ) as tmp_ds:
                         tmp_ds.write(work_array)
                     with rasterio.open(tmp_path) as tmp_ds:
                         clipped, out_transform = mask(tmp_ds, geoms, crop=True)
                 finally:
                     os.unlink(tmp_path)
-                meta.update({"height": clipped.shape[1], "width": clipped.shape[2], "transform": out_transform})
+                meta.update(
+                    {
+                        "height": clipped.shape[1],
+                        "width": clipped.shape[2],
+                        "transform": out_transform,
+                    }
+                )
                 data_array = clipped
             else:
                 data_array = work_array
@@ -371,7 +485,9 @@ def getpopulation_exposure(huc_id, boundary=None, pop_raster=None):
 
     # Fetch boundary from S3 only if still needed for plotting
     if HUC_boundary is None:
-        HUC_boundary = gpd.GeoDataFrame(geometry=getHUC8BoundaryByID(huc_id), crs="EPSG:4326")
+        HUC_boundary = gpd.GeoDataFrame(
+            geometry=getHUC8BoundaryByID(huc_id), crs="EPSG:4326"
+        )
 
     for flood_map in flood_files:
         print(f"Processing population exposure for: {flood_map}")

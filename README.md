@@ -7,6 +7,7 @@
     <a href="https://opensource.org/licenses/GPL-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3" /></a><br>
     <a href="https://badge.fury.io/py/fimserve"><img src="https://badge.fury.io/py/fimserve.svg?icon=si%3Apython" alt="PyPI version" /></a>
     <a href="https://pepy.tech/projects/fimserve"><img src="https://static.pepy.tech/badge/fimserve" alt="PyPI Downloads" /></a>
+    <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" /></a>
   </p>
 </div>
 
@@ -21,7 +22,7 @@
 ### **Background**
 <hr style="border: 1px solid black; margin: 0;">  
 
-OWP HAND-FIM is a national-scale operational flood forecasting framework (https://github.com/NOAA-OWP/inundation-mapping). It is a terrain-based fluvial flooding model that uses model-predicted streamflow and reach-averaged Synthetic Rating Curves (SRCs) to generate inundation extent and depth rasters at HUC-8 scale (Hydrologic Unit Code-8). The model can produce FIMs for all order streams within the watershed at a very low computational cost. This notebook streamline the FIM generation process or the OWP HAND-FIM framework on the cloud. It allow users to run over mutiple HUC-8s simultaneously. This model can run using any temporal resolution available from the input streamflow data (hourly, daily, monthly etc). ### **Currently we are hosting the FIM-4.5 and 4.8 version for Inundation Mapping.Based on user's choice HAND rasters from specific version can be called and used in FIM (Please refer to Step-1)** 
+OWP HAND-FIM is a national-scale operational flood forecasting framework (https://github.com/NOAA-OWP/inundation-mapping). It is a terrain-based fluvial flooding model that uses model-predicted streamflow and reach-averaged Synthetic Rating Curves (SRCs) to generate inundation extent and depth rasters at HUC-8 scale (Hydrologic Unit Code-8). The model can produce FIMs for all order streams within the watershed at a very low computational cost. This notebook streamline the FIM generation process or the OWP HAND-FIM framework on the cloud. It allow users to run over mutiple HUC-8s simultaneously. This model can run using any temporal resolution available from the input streamflow data (hourly, daily, monthly etc). **Currently we are hosting the FIM-4.5 and 4.8 version for Inundation Mapping.** Based on user's choice HAND rasters from specific version can be called and used in FIM (Please refer to Step-1)
 
 ### **Package structures**
 <hr style="border: 1px solid black; margin: 0;">  

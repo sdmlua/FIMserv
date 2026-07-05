@@ -1,4 +1,3 @@
-from pathlib import Path
 import fimserve as fm
 
 huc = "03020202"
