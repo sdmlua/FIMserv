@@ -1,57 +1,68 @@
 [project]
 name = "fimserve"
-version = "0.2.0"
+version = "0.2.1"
 description = "Framework which is developed with the purpose of quickly generating Flood Inundation Maps (FIM) for emergency response and risk assessment. It is developed under Surface Dynamics Modeling Lab (SDML)."
-authors = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
+authors = [
+    { name = "Surface Dynamics Modeling Lab (SDML)" },
+    { name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }
+    ]
 maintainers = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
 license = { text = "GPL-3.0" }
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "teehr==0.5.0",
-    "geemap>=0.35.1",
+    "teehr==0.6.6",
+    # geemap >=0.38 and matplotlib >=3.11 require Python >=3.11; the floors below
+    # stay at the newest release that still supports the 3.10 floor above.
+    "geemap>=0.37.2",
+    # pyarrow <21 and netcdf4 ==1.7.2 are imposed by teehr.
     "pyarrow>=20.0.0,<21",
-    "numpy>=2.0.0",
+    # numba <0.67 caps numpy at <2.5; 2.2.6 is the newest numpy supporting 3.10.
+    "numpy>=2.2.6",
     "netcdf4>=1.7.2",
     "fiona>=1.10.1",
     "utils>=1.0.2",
-    "matplotlib>=3.9.2",
-    "awscli>=1.43.5",
-    "boto3>=1.40.0",
-    "numba==0.60.0",
-    "bottleneck>=1.3.6",
-    "localtileserver>=0.10.5",
-    "tqdm>=4.67.0",
-    "scipy>=1.14.1",
-    "aiohttp>=3.14.1",
-    "scikit-learn>=1.5.2",
-    "tabulate>=0.9.0",
+    "matplotlib>=3.10.9",
+    "awscli>=1.46.0",
+    "boto3>=1.41.5",
+    "numba==0.66.0",
+    "bottleneck>=1.6.0",
+    "localtileserver>=1.0.0",
+    "tqdm>=4.70.0",
+    "scipy>=1.15.3",
+    "aiohttp>=3.14.3",
+    "scikit-learn>=1.7.2",
+    "tabulate>=0.10.0",
     "nodejs-bin>=18.4.0a4",
-    "ipykernel>=6.17.1",
-    "beautifulsoup4>=4.12.3",
-    "python-dotenv>=1.0.1",
+    "ipykernel>=7.3.0",
+    "beautifulsoup4>=4.15.0",
+    "python-dotenv>=1.2.2",
     "jupyter>=1.1.1",
-    "notebook>=6.5.7",
+    "notebook>=7.6.1",
     "geocube<=0.7.1",
-    "geopandas>=0.14.3",
-    "fimeval>=0.1.59",
-    "setuptools>=82.0.0",
+    "geopandas>=1.1.4",
+    "fimeval>=0.1.65",
+    "setuptools>=84.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0.3",
-    "sphinx<7.0",
+    "pytest>=9.1.1",
+    # sphinx >=8 needs docutils >=0.20, but awscli 1.x pins docutils <=0.19.
+    "sphinx>=7.3.7,<7.4",
     "sphinx-autobuild>=2024.10.3",
-    "ruff>=0.15"
+    "ruff>=0.16.2"
 ]
 
 # Install with: pip install "fimserve[sm]"
 # This pulls in PyTorch and SM-enhancement runtime dependencies.
 sm = [
-    "pytorch-lightning>=2.2,<3",
-    "torchmetrics>=1.3,<2",
+    "pytorch-lightning>=2.6.5,<3",
+    "torchmetrics>=1.9.0,<2",
 ]
+
+[tool.uv]
+override-dependencies = ["pyiceberg>=0.10.0,<0.11.0"]
 
 [project.urls]
 Homepage = "https://github.com/sdmlua/FIMserv"

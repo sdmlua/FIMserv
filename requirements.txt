@@ -1,40 +1,40 @@
 # Base Dependencies
-teehr==0.5.0
-geemap>=0.35.1
+teehr==0.6.6
+geemap>=0.37.2
 pyarrow>=20.0.0,<21
-numpy>=2.0.0
+numpy>=2.2.6
 netcdf4>=1.7.2
 fiona>=1.10.1
 utils>=1.0.2
-matplotlib>=3.9.2
-awscli>=1.42.0
-boto3>=1.40.0
-numba==0.60.0
-bottleneck>=1.3.6
-localtileserver>=0.10.5
-tqdm>=4.67.0
-scipy>=1.14.1
-aiohttp>=3.14.1
-scikit-learn>=1.5.2
-tabulate>=0.9.0
+matplotlib>=3.10.9
+awscli>=1.46.0
+boto3>=1.41.5
+numba==0.66.0
+bottleneck>=1.6.0
+localtileserver>=1.0.0
+tqdm>=4.70.0
+scipy>=1.15.3
+aiohttp>=3.14.3
+scikit-learn>=1.7.2
+tabulate>=0.10.0
 nodejs-bin>=18.4.0a4
-ipykernel>=6.17.1
-beautifulsoup4>=4.12.3
-python-dotenv>=1.0.1
+ipykernel>=7.3.0
+beautifulsoup4>=4.15.0
+python-dotenv>=1.2.2
 jupyter>=1.1.1
-notebook>=6.5.7
+notebook>=7.6.1
 geocube<=0.7.1
-geopandas>=0.14.3
-fimeval>=0.1.59
+geopandas>=1.1.4
+fimeval>=0.1.65
 
 # Dev Dependencies
-pytest>=9.0.3
-sphinx<7.0
+pytest>=9.1.1
+sphinx>=7.3.7,<7.4
 sphinx-autobuild>=2024.10.3
 black
 
 # SM focused Dependencies
-torch>=2.3.0
-pytorch-lightning>=2.2,<3
-torchmetrics>=1.3,<2
+torch>=2.13.0
+pytorch-lightning>=2.6.5,<3
+torchmetrics>=1.9.0,<2
 msfootprint>=0.1.31
