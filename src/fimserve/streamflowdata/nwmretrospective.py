@@ -8,6 +8,24 @@ import teehr.fetching.nwm.retrospective_points as nwm_retro
 from ..datadownload import setup_directories
 
 
+# Parquet naming shared by the writer, the "already downloaded" check and the plots
+def retrospectivefilename(start_date, end_date):
+    start, end = str(start_date).replace("-", ""), str(end_date).replace("-", "")
+    return f"NWM_retrospective_{start}_{end}.parquet"
+
+
+def resolveretrospectivefile(retrospective_dir, start_date, end_date):
+    """Returns the parquet for this range, falling back to the pre-rename filename."""
+    retrospective_dir = Path(retrospective_dir)
+    current = retrospective_dir / retrospectivefilename(start_date, end_date)
+    if current.exists():
+        return current
+
+    start, end = str(start_date).replace("-", ""), str(end_date).replace("-", "")
+    legacy = retrospective_dir / f"{start}_{end}.parquet"
+    return legacy if legacy.exists() else None
+
+
 # Aggregated discharge for a certain time range (max, min, mean)
 def get_aggregated_discharge(
     retrospective_dir, location_ids_file, start_date, end_date, data_dir, huc, sortby
@@ -19,13 +37,13 @@ def get_aggregated_discharge(
     all_data = pd.DataFrame()
 
     # Load only the relevant parquet file for this range
-    formatted_filename = (
-        f"{start_date.replace('-', '')}_{end_date.replace('-', '')}.parquet"
-    )
-    file_path = retrospective_dir / formatted_filename
+    file_path = resolveretrospectivefile(retrospective_dir, start_date, end_date)
 
-    if not file_path.exists():
-        print(f"File {file_path} not found for aggregation.")
+    if file_path is None:
+        print(
+            f"File {retrospectivefilename(start_date, end_date)} not found "
+            f"in {retrospective_dir} for aggregation."
+        )
         return
 
     df = pd.read_parquet(file_path)
@@ -120,13 +138,9 @@ def getnwm_discharge(
     output_dir = Path(output_root) / "discharge" / f"{nwm_version}_retrospective"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    formatted_filename = (
-        f"{start_date.replace('-', '')}_{end_date.replace('-', '')}.parquet"
-    )
-    file_path = output_dir / formatted_filename
-
-    # Check if the file already exists
-    if file_path.exists():
+    # Check if the file already exists, under either the current or the old name
+    file_path = resolveretrospectivefile(output_dir, start_date, end_date)
+    if file_path is not None:
         print(
             f"Discharge file already exists in {file_path}, skipping download and getting streamflow for valuetimes"
         )
@@ -143,6 +157,12 @@ def getnwm_discharge(
         location_ids=location_ids,
         output_parquet_dir=output_dir,
     )
+
+    # TEEHR names its output by the date range only, so tag it with the product
+    start, end = start_date.replace("-", ""), end_date.replace("-", "")
+    written = output_dir / f"{start}_{end}.parquet"
+    if written.exists():
+        written.rename(output_dir / retrospectivefilename(start_date, end_date))
     print(f"NWM discharge data saved to {output_dir}.")
 
 
@@ -255,10 +275,8 @@ def _process_huc_request(
 
             # Cleanup temporary window file if we didn't have retro_dir before
             if not initial_exists:
-                tmp_file = os.path.join(
-                    retro_dir, f"{lag.replace('-', '')}_{lead.replace('-', '')}.parquet"
-                )
-                if os.path.exists(tmp_file):
+                tmp_file = resolveretrospectivefile(retro_dir, lag, lead)
+                if tmp_file is not None:
                     os.remove(tmp_file)
 
     # Final cleanup if directory was created just for this session

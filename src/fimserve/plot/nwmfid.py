@@ -3,6 +3,10 @@ import os
 import matplotlib.pyplot as plt
 
 from ..datadownload import setup_directories
+from ..streamflowdata.nwmretrospective import (
+    resolveretrospectivefile,
+    retrospectivefilename,
+)
 
 
 def _notebook_env() -> str:
@@ -40,13 +44,13 @@ def getFIDdata(data_dir, feature_id, start_date, end_date):
 
     start_dateSTR = start_date.strftime("%Y%m%d")
     end_dateSTR = end_date.strftime("%Y%m%d")
-    target_file = f"{start_dateSTR}_{end_dateSTR}.parquet"
 
-    target_dir = os.path.join(data_dir, target_file)
+    target_dir = resolveretrospectivefile(data_dir, start_dateSTR, end_dateSTR)
 
-    if not os.path.exists(target_dir):
+    if target_dir is None:
         raise FileNotFoundError(
-            f"No NWM data found for the date range: {target_file} in {data_dir}. "
+            f"No NWM data found for the date range: "
+            f"{retrospectivefilename(start_dateSTR, end_dateSTR)} in {data_dir}. "
             "Please check the date range that you downloaded for that HUC."
         )
 
@@ -64,13 +68,13 @@ def getFIDdata(data_dir, feature_id, start_date, end_date):
 def getFeatureWithMaxDischarge(data_dir, start_date, end_date):
     start_dateSTR = pd.to_datetime(start_date).strftime("%Y%m%d")
     end_dateSTR = pd.to_datetime(end_date).strftime("%Y%m%d")
-    target_file = f"{start_dateSTR}_{end_dateSTR}.parquet"
 
-    target_dir = os.path.join(data_dir, target_file)
+    target_dir = resolveretrospectivefile(data_dir, start_dateSTR, end_dateSTR)
 
-    if not os.path.exists(target_dir):
+    if target_dir is None:
         raise FileNotFoundError(
-            f"No NWM data found for the date range: {target_file} in {data_dir}. "
+            f"No NWM data found for the date range: "
+            f"{retrospectivefilename(start_dateSTR, end_dateSTR)} in {data_dir}. "
             "Please check the date range that you downloaded for that HUC."
         )
 

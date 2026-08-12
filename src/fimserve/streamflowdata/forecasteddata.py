@@ -102,27 +102,29 @@ def download_nc_files(date_str, current_hour, download_dir, url_base, forecast_r
     date_output_dir = os.path.join(download_dir, "netCDF", date_str)
     os.makedirs(date_output_dir, exist_ok=True)
 
-    # Possible File patterns for each forecast type
+    # Possible File patterns for each forecast type.
+    # Horizons end at f018 (short), f240 (medium) and f720 (long); medium range is
+    # sampled 3-hourly, which the pre-2019 and the mem1 layouts both publish.
     expected_forecast_files = []
     if forecast_type == "short_range":
         expected_forecast_files = [
             f"nwm.t{current_hour:02d}z.short_range.channel_rt.f{hour:03d}.conus.nc"
-            for hour in range(1, 18)
+            for hour in range(1, 19)
         ]
     elif forecast_type == "medium_range":
         expected_forecast_files = [
             f"nwm.t{current_hour:02d}z.medium_range.channel_rt.f{hour:03d}.conus.nc"
-            for hour in range(3, 240, 3)
+            for hour in range(3, 241, 3)
         ]
     elif forecast_type == "medium_range_mem1":
         expected_forecast_files = [
             f"nwm.t{current_hour:02d}z.medium_range.channel_rt_1.f{hour:03d}.conus.nc"
-            for hour in range(3, 240, 3)
+            for hour in range(3, 241, 3)
         ]
     elif forecast_type == "long_range_mem1":
         expected_forecast_files = [
             f"nwm.t{current_hour:02d}z.long_range.channel_rt_1.f{hour:03d}.conus.nc"
-            for hour in range(6, 720, 6)
+            for hour in range(6, 721, 6)
         ]
 
     successful_downloads = []

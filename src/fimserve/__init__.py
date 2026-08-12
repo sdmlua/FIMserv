@@ -7,6 +7,7 @@ from .streamflowdata.nwmretrospective import getNWMretrospectivedata
 from .runFIM import runOWPHANDFIM
 
 from .streamflowdata.forecasteddata import getNWMForecasteddata
+from .streamflowdata.nwmanalysisassim import getNWManalysisAssim
 from .streamflowdata.geoglows import getGEOGLOWSstreamflow
 
 # plots
@@ -66,6 +67,7 @@ __all__ = [
     "getNWMretrospectivedata",
     "runOWPHANDFIM",
     "getNWMForecasteddata",
+    "getNWManalysisAssim",
     "getGEOGLOWSstreamflow",
     "plotNWMStreamflow",
     "getUSGSsitedata",

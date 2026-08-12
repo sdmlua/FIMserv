@@ -14,8 +14,8 @@ def test_runfim():
 
     # #Hindcast data
     # Get the NWM data
-    start_date = "2016-01-01"
-    end_date = "2016-01-03"
+    start_date = "2024-10-01"
+    end_date = "2024-10-10"
 
     # #For 12060202
     feature_id = ["5513784", "5513550", "5512092", "5512484"]
@@ -30,9 +30,9 @@ def test_runfim():
     # # usgs_sites = ['0209205053', '02091814', '02089500', '02089000']
 
     # for fixed date or day data
-    value_times = ["2016-01-02"]
+    value_times = ["2024-10-05"]
     # fm.getNWMretrospectivedata(huc, value_times)
-    fm.getNWMretrospectivedata(huc, start_date, end_date, discharge_sortby="maximum")
+    # fm.getNWMretrospectivedata(huc, start_date, end_date, discharge_sortby="maximum")
 
     # # #Get USGS data
     # fm.getUSGSsitedata(huc, start_date, end_date)
@@ -52,6 +52,19 @@ def test_runfim():
     # # #Medium range forecast
     # fm.getNWMForecasteddata(
     #     huc, forecast_range="mediumrange", forecast_date="2024-11-14", hour=6
+    # )
+
+    # # #Analysis and Assimilation (AnA) data, indexed by valid time instead of a forecast cycle. Available from 2018-09-17, so the 2016 range above is too early
+    # # #One aggregated discharge file over the range
+    # fm.getNWManalysisAssim(huc, start_date, end_date)
+
+    # # #Continuous hourly discharge, one CSV per timestep
+    # fm.getNWManalysisAssim(huc, start_date, end_date, continuous_discharge=True)
+
+    # #Only the event day, or only a single timestep, within the range
+    fm.getNWManalysisAssim(huc, start_date, end_date, value_times)
+    # fm.getNWManalysisAssim(
+    #     huc, start_date, end_date, value_times="2024-09-27 12:00:00"
     # )
 
     # Run the FIM model

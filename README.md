@@ -41,7 +41,8 @@ FIMserv/
 │       │   ├── nwmretrospectivedata.py   # Processes NWM retrospective data
 │       │   ├── geoglows.py   # Module to retrieve geoglows streamflow data 
 │       │   ├── usgsdata.py   # Retrieve USGS gauge station data
-│       │   └── forecasteddata.py        # Processes all range forecasted streamflow data
+│       │   ├── forecasteddata.py        # Processes all range forecasted streamflow data
+│       │   └── nwmanalysisassim.py      # Processes NWM Analysis and Assimilation (AnA) data
 │       ├── plots/          # Vizualization functionalities
 │       ├── FIMsubset/      # Subsetting functionalities for FIM
 │       │   ├── xycoord.py  # Subset using Lat, Lon 
@@ -133,6 +134,12 @@ fm.DownloadHUC8(huc,version='4.5')
 Users can retrieve NWM forecasted and retrospective data for a specified date range (start date to end date). Additionally, they can store streamflow data for a specific date, as defined by value_times, during the initialization process to generate FIM.
 ```bash
 fm.getNWMretrospectivedata(start_date, end_date, huc, value_time)
+```
+NWM Analysis and Assimilation (AnA) streamflow, the gauge assimilated best estimate of past conditions, is also available for events from 2018-09-17 onwards. It is indexed by valid time, so users pass a start and end date (with or without an hour, in UTC) and get either one aggregated discharge file or a continuous hourly series.
+```bash
+fm.getNWManalysisAssim(huc, start_date, end_date)                            #One file aggregated over the range
+fm.getNWManalysisAssim(huc, start_date, end_date, continuous_discharge=True) #One file per hour
+fm.getNWManalysisAssim(huc, start_date, end_date, value_times=value_times)     #Only the event day or timestep
 ```
 **Step 3. Generate the Flood Inundation Mapping**
 
