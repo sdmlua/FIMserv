@@ -34,6 +34,11 @@ dependencies = [
     "tqdm>=4.66",
     "python-dotenv>=1.0",
     "fimeval>=0.1.65",
+    # teehr pulls numba, which pulls llvmlite. llvmlite stopped publishing macOS
+    # x86_64 wheels at 0.46, so on Intel Macs anything newer falls back to a
+    # source build that needs CMake. numba <0.63 pins llvmlite to 0.45, the last
+    # release with an x86_64 wheel. Every other platform is left unconstrained.
+    "numba<0.63; sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
 
 [project.optional-dependencies]
