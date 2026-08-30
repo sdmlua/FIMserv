@@ -1,6 +1,6 @@
 [project]
 name = "fimserve"
-version = "0.2.11"
+version = "0.2.12"
 description = "Framework which is developed with the purpose of quickly generating Flood Inundation Maps (FIM) for emergency response and risk assessment. It is developed under Surface Dynamics Modeling Lab (SDML)."
 authors = [
     { name = "Surface Dynamics Modeling Lab (SDML)" },
@@ -9,43 +9,43 @@ authors = [
 maintainers = [{ name = "Supath Dhital", email = "sdhital@crimson.ua.edu" }]
 license = { text = "GPL-3.0" }
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+# Upper bound tracks teehr, which supports <3.14. Colab runs 3.13.
+requires-python = ">=3.10,<3.14"
+# Floors are the oldest release that actually works, not the newest available.
+# Raising them forces hosted notebooks (Colab) to swap out preinstalled binary
+# packages, which breaks the already-imported numpy/pyarrow ABI in a live kernel.
 dependencies = [
     "teehr==0.6.6",
-    # geemap >=0.38 and matplotlib >=3.11 require Python >=3.11; the floors below
-    # stay at the newest release that still supports the 3.10 floor above.
     "geemap>=0.37.2",
     # pyarrow <21 and netcdf4 ==1.7.2 are imposed by teehr.
-    "pyarrow>=20.0.0,<21",
-    # numba <0.67 caps numpy at <2.5; 2.2.6 is the newest numpy supporting 3.10.
-    "numpy>=2.2.6",
+    "pyarrow>=15,<21",
     "netcdf4>=1.7.2",
-    "fiona>=1.10.1",
-    "utils>=1.0.2",
-    "matplotlib>=3.10.9",
-    "awscli>=1.46.0",
-    "boto3>=1.41.5",
-    "numba==0.66.0",
-    "bottleneck>=1.6.0",
-    "localtileserver>=1.0.0",
-    "tqdm>=4.70.0",
-    "scipy>=1.15.3",
-    "aiohttp>=3.14.3",
-    "scikit-learn>=1.7.2",
-    "tabulate>=0.10.0",
-    "nodejs-bin>=18.4.0a4",
-    "ipykernel>=7.3.0",
-    "beautifulsoup4>=4.15.0",
-    "python-dotenv>=1.2.2",
-    "jupyter>=1.1.1",
-    "notebook>=7.6.1",
+    "numpy>=2.1",
+    "scipy>=1.11",
+    "geopandas>=1.0.1",
     "geocube<=0.7.1",
-    "geopandas>=1.1.4",
+    "fiona>=1.10.1",
+    "matplotlib>=3.7",
+    "awscli>=1.32",
+    "boto3>=1.34",
+    "aiohttp>=3.9",
+    "beautifulsoup4>=4.12",
+    "tabulate>=0.9",
+    "tqdm>=4.66",
+    "python-dotenv>=1.0",
     "fimeval>=0.1.65",
-    "setuptools>=84.0.0",
 ]
 
 [project.optional-dependencies]
+# Only for a local Jupyter setup. Never install these on Colab/Binder: replacing
+# ipykernel/notebook under a live kernel is what breaks `import fimserve` there.
+notebook = [
+    "jupyter>=1.1.1",
+    "notebook>=7.6.1",
+    "ipykernel>=7.3.0",
+    "localtileserver>=1.0.0",
+]
+
 dev = [
     "pytest>=9.1.1",
     # sphinx >=8 needs docutils >=0.20, but awscli 1.x pins docutils <=0.19.
