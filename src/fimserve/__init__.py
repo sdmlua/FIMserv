@@ -2,6 +2,11 @@ import warnings
 
 warnings.simplefilter("ignore")
 
+# Make teehr 0.6.6 tolerate current pandera/pandas before any download runs.
+from ._teehr_compat import apply as _apply_teehr_compat
+
+_apply_teehr_compat()
+
 from .datadownload import DownloadHUC8
 from .streamflowdata.nwmretrospective import getNWMretrospectivedata
 from .runFIM import runOWPHANDFIM

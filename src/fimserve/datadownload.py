@@ -81,7 +81,9 @@ def download_data(huc_number, base_dir, version=None):
 
 
 def uniqueFID(hydrotable, fid_dir, stream_order=None):
-    hydrotable_df = pd.read_csv(hydrotable)
+    # Read entire file at once so pandas infers consistent column dtypes
+    # (avoids DtypeWarning on chunk-boundary type mismatches).
+    hydrotable_df = pd.read_csv(hydrotable, low_memory=False)
 
     if stream_order:
         if isinstance(stream_order, str) and (

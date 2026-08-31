@@ -14,8 +14,8 @@ def test_runfim():
 
     # #Hindcast data
     # Get the NWM data
-    start_date = "2024-10-01"
-    end_date = "2024-10-10"
+    start_date = "2016-10-01"
+    end_date = "2016-10-10"
 
     # #For 12060202
     feature_id = ["5513784", "5513550", "5512092", "5512484"]
@@ -32,7 +32,7 @@ def test_runfim():
     # for fixed date or day data
     value_times = ["2024-10-05"]
     # fm.getNWMretrospectivedata(huc, value_times)
-    # fm.getNWMretrospectivedata(huc, start_date, end_date, discharge_sortby="maximum")
+    fm.getNWMretrospectivedata(huc, start_date, end_date, discharge_sortby="maximum")
 
     # # #Get USGS data
     # fm.getUSGSsitedata(huc, start_date, end_date)

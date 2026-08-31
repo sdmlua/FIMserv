@@ -10,6 +10,16 @@ from ..plot import GetUSGSIDandCorrFID
 from .nwmretrospective import determinedatatimeformat
 
 
+def _prefix_usgs_sites(usgs_sites):
+    """Return site IDs as 'USGS-#######', which teehr's NWIS client now requires."""
+    prefixed = []
+    for site in usgs_sites:
+        site = str(site).strip()
+        bare = site[5:] if site.upper().startswith("USGS-") else site
+        prefixed.append(f"USGS-{bare}")
+    return prefixed
+
+
 def getusgs_discharge(
     start_date,
     end_date,
@@ -22,7 +32,7 @@ def getusgs_discharge(
     usgs_to_parquet(
         start_date=start_date,
         end_date=end_date,
-        sites=usgs_sites,
+        sites=_prefix_usgs_sites(usgs_sites),
         output_parquet_dir=output_dir,
         overwrite_output=True,
     )
