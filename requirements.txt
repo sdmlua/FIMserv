@@ -34,7 +34,7 @@ sphinx-autobuild>=2024.10.3
 black
 
 # SM focused Dependencies
-torch>=2.13.0
+torch>=2.14.1
 pytorch-lightning>=2.6.5,<3
 torchmetrics>=1.9.0,<2
 msfootprint>=0.1.31
